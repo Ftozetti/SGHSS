@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Financeiro{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Bem-vindo, {{ user.get_full_name }}!</h2>
+
+<div class="row g-4">
+  <div class="col-md-6">
+    <div class="card p-3">
+      <h5 class="card-title">Relatórios Financeiros</h5>
+      <a href="#" class="btn btn-outline-light mt-2">Visualizar Entradas e Saídas</a>
+      <a href="#" class="btn btn-outline-light mt-2">Gerar Relatórios</a>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card p-3">
+      <h5 class="card-title">Pedidos de Compra</h5>
+      <a href="#" class="btn btn-outline-light mt-2">Ver Pedidos Pendentes</a>
+      <a href="#" class="btn btn-outline-light mt-2">Confirmar Pagamentos</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
