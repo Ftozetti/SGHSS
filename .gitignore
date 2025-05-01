@@ -1,0 +1,4 @@
+Add-Content .gitignore "venv/"
+Add-Content .gitignore "__pycache__/"
+Add-Content .gitignore "*.sqlite3"
+Add-Content .gitignore "*.log"
