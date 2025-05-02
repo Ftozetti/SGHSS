@@ -44,3 +44,17 @@ class Usuario(AbstractUser):
     @property
     def tipo_usuario(self):
         return dict(self.ROLE_CHOICES).get(self.role, 'Usuário')
+    
+class Sala(models.Model):
+    TIPO_CHOICES = [
+        ('consulta', 'Consulta'),
+        ('exame', 'Exame'),
+    ]
+
+    numero = models.CharField("Número da Sala", max_length=10, unique=True)
+    tipo = models.CharField("Tipo", max_length=10, choices=TIPO_CHOICES)
+    equipamentos = models.TextField("Equipamentos Instalados", blank=True, null=True)
+    observacoes = models.TextField("Observações", blank=True, null=True)
+
+    def __str__(self):
+        return f"Sala {self.numero} - {self.get_tipo_display()}"

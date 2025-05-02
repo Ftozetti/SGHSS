@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block title %}Salas - SHGSS{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Gerenciar Estrutura - Salas</h2>
+
+<a href="{% url 'adicionar_sala' %}" class="btn btn-primary mb-3">Adicionar Sala</a>
+
+<table class="table table-dark table-hover">
+    <thead>
+        <tr>
+            <th>Número</th>
+            <th>Tipo</th>
+            <th>Equipamentos</th>
+            <th>Observações</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for sala in salas %}
+        <tr>
+            <td>{{ sala.numero }}</td>
+            <td>{{ sala.get_tipo_display }}</td>
+            <td>{{ sala.equipamentos }}</td>
+            <td>{{ sala.observacoes }}</td>
+            <td>
+                <a href="{% url 'editar_sala' sala.pk %}" class="btn btn-sm btn-warning">Editar</a>
+                <a href="{% url 'excluir_sala' sala.pk %}" class="btn btn-sm btn-danger">Excluir</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5">Nenhuma sala cadastrada.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
