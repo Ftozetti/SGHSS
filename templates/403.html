@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Acesso Negado{% endblock %}
+
+{% block content %}
+<div class="text-center mt-5">
+    <h1 class="display-4">403</h1>
+    <p class="lead">Você não tem permissão para acessar esta página.</p>
+    <a href="{% url 'home' %}" class="btn btn-outline-light mt-3">Voltar ao início</a>
+</div>
+{% endblock %}

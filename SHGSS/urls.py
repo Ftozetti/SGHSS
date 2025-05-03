@@ -24,3 +24,5 @@ urlpatterns = [
     path('accounts/logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('', include('usuarios.urls')),  # redirecionamento e dashboards
 ]
+
+handler403 = 'usuarios.views.erro_403'

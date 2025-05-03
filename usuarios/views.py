@@ -6,6 +6,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .models import Sala, Agenda
 from .forms import SalaForm, AgendaForm
+from .decorators import role_required
 
 
 #View criada para o correto direcionamento de página inicial conforme o perfil de usuário
@@ -24,28 +25,30 @@ def redirecionar_dashboard(request):
     
     return redirect('login')
 
-@login_required
+@role_required('paciente')
 def dashboard_paciente(request):
     return render(request, 'dashboard/paciente.html')
 
-@login_required
+@role_required('medico')
 def dashboard_medico(request):
     return render(request, 'dashboard/medico.html')
 
-@login_required
+@role_required('administrativo')
 def dashboard_administrativo(request):
     return render(request, 'dashboard/administrativo.html')
 
-@login_required
+@role_required('financeiro')
 def dashboard_financeiro(request):
     return render(request, 'dashboard/financeiro.html')
 
 # Exibir lista de salas
+@role_required('administrativo')
 def lista_salas(request):
     salas = Sala.objects.all()
     return render(request, 'estrutura/lista_salas.html', {'salas': salas})
 
 # Adicionar nova sala
+@role_required('administrativo')
 def adicionar_sala(request):
     form = SalaForm(request.POST or None)
     if form.is_valid():
@@ -54,6 +57,7 @@ def adicionar_sala(request):
     return render(request, 'estrutura/form_sala.html', {'form': form})
 
 # Editar sala existente
+@role_required('administrativo')
 def editar_sala(request, pk):
     sala = get_object_or_404(Sala, pk=pk)
     form = SalaForm(request.POST or None, instance=sala)
@@ -63,6 +67,7 @@ def editar_sala(request, pk):
     return render(request, 'estrutura/form_sala.html', {'form': form})
 
 # Excluir sala
+@role_required('administrativo')
 def excluir_sala(request, pk):
     sala = get_object_or_404(Sala, pk=pk)
     if request.method == 'POST':
@@ -71,11 +76,13 @@ def excluir_sala(request, pk):
     return render(request, 'estrutura/confirmar_exclusao.html', {'sala': sala})
 
 #listar agenda
+@role_required('administrativo')
 def lista_agenda(request):
     agendas = Agenda.objects.order_by('data', 'horario_inicio')
     return render(request, 'agenda/lista_agenda.html', {'agendas': agendas})
 
 #Criar agenda
+@role_required('administrativo')
 def criar_agenda(request):
     if request.method == 'POST':
         form = AgendaForm(request.POST)
@@ -142,6 +149,7 @@ def criar_agenda(request):
     return render(request, 'agenda/form_agenda.html', {'form': form})
 
 #Editar Agenda
+@role_required('administrativo')
 def editar_agenda(request, pk):
     agenda = get_object_or_404(Agenda, pk=pk)
     form = AgendaForm(request.POST or None, instance=agenda)
@@ -151,6 +159,7 @@ def editar_agenda(request, pk):
     return render(request, 'agenda/form_agenda.html', {'form': form})
 
 #Excluir Agenda
+@role_required('administrativo')
 def excluir_agenda(request, pk):
     agenda = get_object_or_404(Agenda, pk=pk)
 
@@ -164,3 +173,7 @@ def excluir_agenda(request, pk):
         return redirect('lista_agenda')
 
     return render(request, 'agenda/excluir_agenda.html', {'agenda': agenda})
+
+#Função para redirecionar a pagina quando usuário tenta acessar pagina sem permissão de acesso
+def erro_403(request, exception=None):
+    return render(request, '403.html', status=403)
