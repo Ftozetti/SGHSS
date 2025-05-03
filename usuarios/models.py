@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
+from django.conf import settings
 
 
 
@@ -103,6 +104,56 @@ class Agenda(models.Model):
 
     @property
     def status(self):
-        # Isso aqui é provisório até você criar o relacionamento com Consulta ou Exame
-        return "Livre"  # Por enquanto, todos são considerados livres
+        from usuarios.models import Consulta  # importação local evita erro de import circular
 
+        if self.procedimento == 'consulta' and Consulta.objects.filter(agenda=self).exists():
+            return "Agendado"
+    
+        return "Livre"
+    
+#Classe abstrata para reaproveitas informações para exames, consultas e teleconsultas
+class AtendimentoBase(models.Model):
+    STATUS_CHOICES = [
+        ('agendada', 'Agendada'),
+        ('cancelada', 'Cancelada'),
+        ('em_andamento', 'Em atendimento'),
+        ('finalizada', 'Finalizada'),
+    ]
+
+    agenda = models.OneToOneField(Agenda, on_delete=models.PROTECT)
+    medico = models.ForeignKey(
+    settings.AUTH_USER_MODEL,
+    on_delete=models.CASCADE,
+    limit_choices_to={'role': 'medico'},
+    related_name='consultas_como_medico'
+)
+    paciente = models.ForeignKey(
+    settings.AUTH_USER_MODEL,
+    on_delete=models.CASCADE,
+    limit_choices_to={'role': 'paciente'},
+    related_name='consultas_como_paciente'
+)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='agendada')
+    observacoes_visiveis = models.TextField(blank=True, null=True)
+    observacoes_internas = models.TextField(blank=True, null=True)
+    encaminhamento = models.TextField(blank=True, null=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True
+
+#Classe Consulta    
+class Consulta(AtendimentoBase):
+    cancelado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='consultas_canceladas'
+    )
+    motivo_cancelamento = models.TextField(blank=True, null=True)
+    valor = models.DecimalField(max_digits=8, decimal_places=2, default=250.00)
+
+    def __str__(self):
+        return f"Consulta de {self.paciente.get_full_name()} com {self.medico.get_full_name()} em {self.agenda.data} às {self.agenda.horario_inicio}"

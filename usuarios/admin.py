@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import Usuario
+from .models import Usuario, Consulta
 
 @admin.register(Usuario)
 class UsuarioAdmin(UserAdmin):
@@ -27,3 +27,8 @@ class UsuarioAdmin(UserAdmin):
             'fields': ('username', 'email', 'password1', 'password2', 'cpf', 'role'),
         }),
     )
+
+@admin.register(Consulta)
+class ConsultaAdmin(admin.ModelAdmin):
+    list_display = ('paciente', 'medico', 'agenda', 'status', 'criado_em')
+    list_filter = ('status', 'medico', 'paciente')

@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}Consultas Agendadas{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Consultas Agendadas</h2>
+
+{% if consultas %}
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Horário</th>
+                <th>Médico</th>
+                <th>Paciente</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for consulta in consultas %}
+            <tr>
+                <td>{{ consulta.agenda.data|date:"d/m/Y" }}</td>
+                <td>{{ consulta.agenda.horario_inicio }} - {{ consulta.agenda.horario_fim }}</td>
+                <td>{{ consulta.medico.get_full_name }}</td>
+                <td>{{ consulta.paciente.get_full_name }}</td>
+                <td>{{ consulta.status|default:"Agendada" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>Nenhuma consulta agendada até o momento.</p>
+{% endif %}
+
+{% if request.user.role == 'paciente' %}
+  <a href="{% url 'dashboard_paciente' %}" class="btn btn-secondary">Voltar ao Dashboard</a>
+{% elif request.user.role == 'administrativo' %}
+  <a href="{% url 'dashboard_administrativo' %}" class="btn btn-secondary">Voltar ao Dashboard</a>
+{% elif request.user.role == 'medico' %}
+  <a href="{% url 'dashboard_medico' %}" class="btn btn-secondary">Voltar ao Dashboard</a>
+{% else %}
+  <a href="{% url 'login' %}" class="btn btn-secondary">Voltar</a>
+{% endif %}
+{% endblock %}
