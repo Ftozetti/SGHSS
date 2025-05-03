@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block title %}Nova Agenda{% endblock %}
+
+{% block content %}
+<h2>Nova Agenda</h2>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Salvar</button>
+    <a href="{% url 'lista_agenda' %}" class="btn btn-secondary">Voltar</a>
+</form>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}Editar Horário da Agenda{% endblock %}
+{% block content %}
+<div class="card p-4">
+    <h4>Editar Horário</h4>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <a href="{% url 'lista_agenda' %}" class="btn btn-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+    </form>
+</div>
+{% endblock %}
