@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .models import Sala, Agenda, Consulta, Usuario
-from .forms import SalaForm, AgendaForm, ConsultaForm
+from .forms import SalaForm, AgendaForm, ConsultaForm, CancelamentoConsultaForm
 from .decorators import role_required
 from django import forms
 
@@ -77,10 +77,14 @@ def excluir_sala(request, pk):
         return redirect('lista_salas')
     return render(request, 'estrutura/confirmar_exclusao.html', {'sala': sala})
 
-#listar agenda
 @role_required('administrativo')
 def lista_agenda(request):
     agendas = Agenda.objects.order_by('data', 'horario_inicio')
+    
+    # Adiciona flag para saber se pode editar ou não
+    for a in agendas:
+        a.tem_consulta_ativa = a.consultas.exclude(status='cancelada').exists()
+
     return render(request, 'agenda/lista_agenda.html', {'agendas': agendas})
 
 #Criar agenda
@@ -154,6 +158,12 @@ def criar_agenda(request):
 @role_required('administrativo')
 def editar_agenda(request, pk):
     agenda = get_object_or_404(Agenda, pk=pk)
+
+    # Impede edição se houver consulta vinculada que não esteja cancelada
+    if agenda.consultas.exclude(status='cancelada').exists():
+        messages.error(request, 'Não é possível editar um horário com consultas em andamento, agendadas ou finalizadas.')
+        return redirect('lista_agenda')
+
     form = AgendaForm(request.POST or None, instance=agenda)
     if form.is_valid():
         form.save()
@@ -166,8 +176,8 @@ def excluir_agenda(request, pk):
     agenda = get_object_or_404(Agenda, pk=pk)
 
     # Checa se está agendada (ajuste depois conforme sua lógica de agendamento)
-    if hasattr(agenda, 'consulta') or hasattr(agenda, 'exame'):
-        messages.error(request, 'Não é possível excluir um horário agendado. Cancele o agendamento antes.')
+    if agenda.consultas.exists():
+        messages.error(request, 'Não é possível excluir um horário com consulta agendada. Cancele antes.')
         return redirect('lista_agenda')
 
     if request.method == 'POST':
@@ -175,6 +185,29 @@ def excluir_agenda(request, pk):
         return redirect('lista_agenda')
 
     return render(request, 'agenda/excluir_agenda.html', {'agenda': agenda})
+
+#Bloqueio manual de Agenda
+@role_required('administrativo')
+def bloquear_agenda(request, pk):
+    agenda = get_object_or_404(Agenda, pk=pk)
+    agenda.status_manual = 'bloqueado'
+    agenda.save()
+    messages.success(request, 'Horário bloqueado com sucesso.')
+    return redirect('lista_agenda')
+
+#Desbloqueio Manual de agenda
+@role_required('administrativo')
+def desbloquear_agenda(request, pk):
+    agenda = get_object_or_404(Agenda, pk=pk)
+
+    if agenda.consultas.filter(status='agendada').exists():
+        messages.error(request, 'Não é possível desbloquear um horário com consulta agendada.')
+        return redirect('lista_agenda')
+
+    agenda.status_manual = 'livre'
+    agenda.save()
+    messages.success(request, 'Horário desbloqueado com sucesso.')
+    return redirect('lista_agenda')
 
 #Função para redirecionar a pagina quando usuário tenta acessar pagina sem permissão de acesso
 def erro_403(request, exception=None):
@@ -200,7 +233,11 @@ def agendar_consulta(request):
                 return redirect('agendar_consulta')
 
             # Verifica se o paciente já tem outro procedimento no mesmo horário
-            conflito = Consulta.objects.filter(paciente=consulta.paciente, agenda=agenda).exists()
+            conflito = Consulta.objects.filter(
+                paciente=consulta.paciente,
+                agenda=agenda,
+                status='agendada'
+            ).exists()
             if conflito:
                 messages.error(request, 'Já existe uma consulta agendada neste horário.')
                 return redirect('agendar_consulta')
@@ -236,3 +273,36 @@ def lista_consultas(request):
         consultas = []
 
     return render(request, 'consultas/lista_consultas.html', {'consultas': consultas})
+
+#view para cancelamento de consulta
+@role_required('paciente', 'administrativo')
+def cancelar_consulta(request, consulta_id):
+    consulta = get_object_or_404(Consulta, id=consulta_id)
+
+    if request.method == 'POST':
+        form = CancelamentoConsultaForm(request.POST)
+        if form.is_valid():
+            consulta.status = 'cancelada'
+            consulta.cancelado_por = request.user
+            consulta.motivo_cancelamento = form.cleaned_data.get('motivo_cancelamento')
+            consulta.save()
+
+            agenda = consulta.agenda
+            liberar_horario = form.cleaned_data.get('liberar_horario')
+
+            # Só bloqueia o horário se for administrativo E ele optar por não liberar
+            if request.user.role == 'administrativo' and not liberar_horario:
+                agenda.status_manual = 'bloqueado'
+            else:
+                agenda.status_manual = 'livre'
+            agenda.save()
+
+            messages.success(request, 'Consulta cancelada com sucesso.')
+            return redirect('lista_consultas')
+    else:
+        form = CancelamentoConsultaForm()
+
+    return render(request, 'consultas/cancelar_consulta.html', {
+        'consulta': consulta,
+        'form': form,
+    })

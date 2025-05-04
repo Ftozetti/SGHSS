@@ -102,14 +102,26 @@ class Agenda(models.Model):
         self.full_clean()  # chama o método clean antes de salvar
         super().save(*args, **kwargs)
 
+    STATUS_CHOICES = [
+        ('livre', 'Livre'),
+        ('agendado', 'Agendado'),
+        ('bloqueado', 'Bloqueado'),
+    ]
+    status_manual = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='livre'
+    )
+
     @property
     def status(self):
-        from usuarios.models import Consulta  # importação local evita erro de import circular
+        from usuarios.models import Consulta
 
-        if self.procedimento == 'consulta' and Consulta.objects.filter(agenda=self).exists():
-            return "Agendado"
-    
-        return "Livre"
+        if self.status_manual == 'bloqueado':
+            return 'Bloqueado'
+        elif self.procedimento == 'consulta' and Consulta.objects.filter(agenda=self, status='agendada').exists():
+            return 'Agendado'
+        return 'Livre'
     
 #Classe abstrata para reaproveitas informações para exames, consultas e teleconsultas
 class AtendimentoBase(models.Model):
@@ -120,7 +132,11 @@ class AtendimentoBase(models.Model):
         ('finalizada', 'Finalizada'),
     ]
 
-    agenda = models.OneToOneField(Agenda, on_delete=models.PROTECT)
+    agenda = models.ForeignKey(
+    Agenda,
+    on_delete=models.PROTECT,
+    related_name='consultas'
+)
     medico = models.ForeignKey(
     settings.AUTH_USER_MODEL,
     on_delete=models.CASCADE,
@@ -140,19 +156,22 @@ class AtendimentoBase(models.Model):
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
 
-    class Meta:
-        abstract = True
-
-#Classe Consulta    
-class Consulta(AtendimentoBase):
     cancelado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='consultas_canceladas'
+        related_name='atendimentos_cancelados'
     )
     motivo_cancelamento = models.TextField(blank=True, null=True)
+    data_cancelamento = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        abstract = True
+
+#Classe Consulta    
+class Consulta(AtendimentoBase):
+
     valor = models.DecimalField(max_digits=8, decimal_places=2, default=250.00)
 
     def __str__(self):

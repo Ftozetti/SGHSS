@@ -2,6 +2,7 @@ from django import forms
 from .models import Sala, Agenda, Consulta
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from django.db.models import Q
 
 #formulário para a criação de salas e estrutura fisica
 class SalaForm(forms.ModelForm):
@@ -57,8 +58,11 @@ class ConsultaForm(forms.ModelForm):
         # Filtrar agendas disponíveis (do tipo consulta e ativas e sem consulta associada)
         self.fields['agenda'].queryset = Agenda.objects.filter(
             procedimento='consulta',
-            ativo=True
-        ).exclude(consulta__isnull=False).order_by('data', 'horario_inicio')
+            ativo=True,
+            status_manual='livre'
+        ).exclude(
+            consultas__status='agendada'
+        ).order_by('data', 'horario_inicio')
 
     def clean(self):
         cleaned_data = super().clean()
@@ -67,7 +71,7 @@ class ConsultaForm(forms.ModelForm):
         medico = cleaned_data.get('medico')
 
         # Verifica se a agenda já está ocupada (segurança extra)
-        if Consulta.objects.filter(agenda=agenda).exists():
+        if agenda.consultas.filter(status='agendada').exists():
             raise ValidationError("Este horário já está agendado.")
 
         # Valida se o médico da consulta é o mesmo da agenda
@@ -77,11 +81,25 @@ class ConsultaForm(forms.ModelForm):
         # Verifica se o paciente já tem atendimento no mesmo horário
         if paciente and agenda:
             conflito = Consulta.objects.filter(
-                paciente=paciente,
-                agenda__data=agenda.data,
-                agenda__horario_inicio=agenda.horario_inicio
-            ).exists()
+            paciente=paciente,
+            agenda__data=agenda.data,
+            agenda__horario_inicio=agenda.horario_inicio,
+            status='agendada'
+        ).exists()
             if conflito:
                 raise ValidationError("Este paciente já tem uma consulta ou exame neste horário.")
 
         return cleaned_data
+
+#Form para efetuar o cancelamento da consulta    
+class CancelamentoConsultaForm(forms.Form):
+    motivo_cancelamento = forms.CharField(
+        label='Motivo do cancelamento (opcional)',
+        widget=forms.Textarea(attrs={'rows': 3}),
+        required=False
+    )
+    liberar_horario = forms.BooleanField(
+        label='Deseja liberar o horário para que outro paciente possa agendar?',
+        required=False,
+        initial=True
+    )

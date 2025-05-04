@@ -5,40 +5,54 @@
 {% block content %}
 <h2 class="mb-4">Consultas Agendadas</h2>
 
+<p class="text-muted">
+    {% if user.role == 'administrativo' %}
+        Visualizando todas as consultas da clínica.
+    {% elif user.role == 'medico' %}
+        Visualizando suas consultas como médico.
+    {% elif user.role == 'paciente' %}
+        Visualizando suas consultas agendadas.
+    {% endif %}
+</p>
+
 {% if consultas %}
-    <table class="table table-bordered table-striped">
-        <thead>
-            <tr>
-                <th>Data</th>
-                <th>Horário</th>
-                <th>Médico</th>
-                <th>Paciente</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for consulta in consultas %}
-            <tr>
-                <td>{{ consulta.agenda.data|date:"d/m/Y" }}</td>
-                <td>{{ consulta.agenda.horario_inicio }} - {{ consulta.agenda.horario_fim }}</td>
-                <td>{{ consulta.medico.get_full_name }}</td>
-                <td>{{ consulta.paciente.get_full_name }}</td>
-                <td>{{ consulta.status|default:"Agendada" }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Data</th>
+            <th>Horário</th>
+            <th>Médico</th>
+            <th>Paciente</th>
+            <th>Status</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for consulta in consultas %}
+        <tr>
+            <td>{{ consulta.agenda.data }}</td>
+            <td>{{ consulta.agenda.horario_inicio }} às {{ consulta.agenda.horario_fim }}</td>
+            <td>{{ consulta.medico.get_full_name }}</td>
+            <td>{{ consulta.paciente.get_full_name }}</td>
+            <td>{{ consulta.status|default:"Agendada" }}</td>
+            <td>
+                {% if consulta.status != 'cancelada' %}
+                    <a href="{% url 'cancelar_consulta' consulta.id %}" class="btn btn-sm btn-danger">Cancelar</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 {% else %}
     <p>Nenhuma consulta agendada até o momento.</p>
 {% endif %}
 
-{% if request.user.role == 'paciente' %}
-  <a href="{% url 'dashboard_paciente' %}" class="btn btn-secondary">Voltar ao Dashboard</a>
-{% elif request.user.role == 'administrativo' %}
-  <a href="{% url 'dashboard_administrativo' %}" class="btn btn-secondary">Voltar ao Dashboard</a>
-{% elif request.user.role == 'medico' %}
-  <a href="{% url 'dashboard_medico' %}" class="btn btn-secondary">Voltar ao Dashboard</a>
-{% else %}
-  <a href="{% url 'login' %}" class="btn btn-secondary">Voltar</a>
+{% if user.role == 'administrativo' %}
+    <a href="{% url 'dashboard_administrativo' %}" class="btn btn-secondary">Voltar ao Dashboard</a>
+{% elif user.role == 'paciente' %}
+    <a href="{% url 'dashboard_paciente' %}" class="btn btn-secondary">Voltar ao Dashboard</a>
+{% elif user.role == 'medico' %}
+    <a href="{% url 'dashboard_medico' %}" class="btn btn-secondary">Voltar ao Dashboard</a>
 {% endif %}
 {% endblock %}

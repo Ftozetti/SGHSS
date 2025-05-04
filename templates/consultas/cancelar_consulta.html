@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Cancelar Consulta</h2>
+
+<p>
+    <strong>Paciente:</strong> {{ consulta.paciente.get_full_name }}<br>
+    <strong>Médico:</strong> {{ consulta.medico.get_full_name }}<br>
+    <strong>Data:</strong> {{ consulta.agenda.data }}<br>
+    <strong>Horário:</strong> {{ consulta.agenda.horario_inicio }}
+</p>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label for="motivo_cancelamento" class="form-label">Motivo do Cancelamento (opcional):</label>
+        {{ form.motivo_cancelamento }}
+    </div>
+
+    {% if user.role == 'administrativo' %}
+    <div class="form-check mb-3">
+        {{ form.liberar_horario }}
+        <label for="id_liberar_horario" class="form-check-label">
+            Deseja deixar este horário disponível para que outro paciente possa agendar?
+        </label>
+    </div>
+    {% endif %}
+
+    <button type="submit" class="btn btn-danger">Confirmar Cancelamento</button>
+    <a href="{% url 'lista_consultas' %}" class="btn btn-secondary">Voltar</a>
+</form>
+{% endblock %}

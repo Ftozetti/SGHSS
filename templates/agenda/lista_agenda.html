@@ -5,6 +5,10 @@
 {% block content %}
 <h2>Agenda Médica</h2>
 <a href="{% url 'criar_agenda' %}" class="btn btn-success mb-3">Incluir Agenda</a>
+<div class="mb-3">
+  <a href="{% url 'redirecionar_dashboard' %}" class="btn btn-secondary">🏠 Retornar à Home</a>
+</div>
+
 
 <table class="table table-dark table-striped">
     <thead>
@@ -14,6 +18,8 @@
             <th>Procedimento</th>
             <th>Médico</th>
             <th>Sala</th>
+            <th>Status</th>
+            <th>Ações</th>  
         </tr>
     </thead>
     <tbody>
@@ -25,21 +31,34 @@
             <td>{{ agenda.medico }}</td>
             <td>{{ agenda.sala }}</td>
             <td>
-                {% if agenda.status == 'Agendado' %}
-                  <span class="badge bg-danger">Agendado</span>
-                {% else %}
-                  <span class="badge bg-success">Livre</span>
-                {% endif %}
-              </td>
-              <td>
-                <a href="{% url 'editar_agenda' agenda.id %}" class="btn btn-sm btn-primary">Editar</a>
-                
-                {% if agenda.status == 'Livre' %}
-                  <a href="{% url 'excluir_agenda' agenda.id %}" class="btn btn-sm btn-danger">Excluir</a>
-                {% else %}
-                  <button class="btn btn-sm btn-secondary" disabled>Não permitido</button>
-                {% endif %}
-              </td>
+              {% if agenda.status == 'Agendado' %}
+                <span class="badge bg-danger">Agendado</span>
+              {% elif agenda.status == 'Bloqueado' %}
+                <span class="badge bg-warning text-dark">Bloqueado</span>
+              {% else %}
+                <span class="badge bg-success">Livre</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if agenda.tem_consulta_ativa %}
+              <button class="btn btn-sm btn-secondary" disabled>Editar Indisponível</button>
+            {% else %}
+              <a href="{% url 'editar_agenda' agenda.id %}" class="btn btn-sm btn-primary">Editar</a>
+            {% endif %}
+            
+            
+              {% if agenda.status == 'Livre' and not agenda.consultas.exists %}
+                <a href="{% url 'excluir_agenda' agenda.id %}" class="btn btn-sm btn-danger">Excluir</a>
+              {% else %}
+                <button class="btn btn-sm btn-secondary" disabled>Excluir Indisponível</button>
+              {% endif %}
+
+              {% if agenda.status == 'Bloqueado' %}
+                <a href="{% url 'desbloquear_agenda' agenda.id %}" class="btn btn-sm btn-success">Desbloquear</a>
+              {% elif agenda.status == 'Livre' %}
+                <a href="{% url 'bloquear_agenda' agenda.id %}" class="btn btn-sm btn-warning">Bloquear</a>
+              {% endif %}
+            </td>            
         </tr>
         {% empty %}
         <tr><td colspan="5">Nenhum horário cadastrado.</td></tr>
