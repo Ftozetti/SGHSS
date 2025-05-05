@@ -1,5 +1,5 @@
 from django import forms
-from .models import Sala, Agenda, Consulta
+from .models import Sala, Agenda, Consulta, Laudo, Receita, Atestado, Prontuario, Usuario
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.db.models import Q
@@ -102,4 +102,44 @@ class CancelamentoConsultaForm(forms.Form):
         label='Deseja liberar o horário para que outro paciente possa agendar?',
         required=False,
         initial=True
+    )
+
+#Form para a criação de documentos medicos em consultas
+class LaudoForm(forms.ModelForm):
+    class Meta:
+        model = Laudo
+        fields = ['conteudo']
+
+class ReceitaForm(forms.ModelForm):
+    class Meta:
+        model = Receita
+        fields = ['conteudo']
+
+class AtestadoForm(forms.ModelForm):
+    class Meta:
+        model = Atestado
+        fields = ['conteudo']
+
+#Formulário para o preenchimento do prontuário
+class ProntuarioForm(forms.ModelForm):
+    class Meta:
+        model = Prontuario
+        fields = ['alergias', 'tratamentos', 'historico_cirurgias', 'observacoes_medicas']
+
+#Form para capturar as informações de observações em consultas
+class ObservacoesConsultaForm(forms.ModelForm):
+    class Meta:
+        model = Consulta
+        fields = ['observacoes_visiveis', 'observacoes_internas']
+        widgets = {
+            'observacoes_visiveis': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'observacoes_internas': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+        }
+
+#Forms para selecionar paciente
+class SelecionarPacienteForm(forms.Form):
+    paciente = forms.ModelChoiceField(
+        queryset=Usuario.objects.filter(role='paciente', is_active=True),
+        label="Selecione um paciente",
+        widget=forms.Select(attrs={'class': 'form-control'})
     )

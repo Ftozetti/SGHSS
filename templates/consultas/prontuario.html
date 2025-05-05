@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="top-bar">
+        <h1>Prontuário de {{ paciente.get_full_name }}</h1>
+        <a href="{% url 'dashboard_medico' %}" class="home-btn">🏠 Voltar para o Dashboard</a>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-section">
+            <label for="id_alergias">Alergias Apresentadas:</label>
+            {{ form.alergias }}
+        </div>
+        <div class="form-section">
+            <label for="id_tratamentos">Tratamentos Efetuados:</label>
+            {{ form.tratamentos }}
+        </div>
+        <div class="form-section">
+            <label for="id_historico_cirurgias">Histórico de Cirurgias:</label>
+            {{ form.historico_cirurgias }}
+        </div>
+        <div class="form-section">
+            <label for="id_observacoes_medicas">Observações Médicas:</label>
+            {{ form.observacoes_medicas }}
+        </div>
+        <button type="submit" class="submit-btn">Salvar Prontuário</button>
+    </form>
+
+    <h2>Consultas Finalizadas</h2>
+    {% for consulta in consultas %}
+        <div class="registro">
+            <strong>Data:</strong> {{ consulta.agenda.data }}<br>
+            <strong>Médico:</strong> {{ consulta.medico.get_full_name }}<br>
+            <strong>Status:</strong> {{ consulta.status }}
+        </div>
+    {% empty %}
+        <p>Nenhuma consulta finalizada encontrada.</p>
+    {% endfor %}
+
+    <h2>Teleconsultas Finalizadas</h2>
+    {% for tele in teleconsultas %}
+        <div class="registro">
+            <strong>Data:</strong> {{ tele.data }}<br>
+            <strong>Médico:</strong> {{ tele.medico.get_full_name }}<br>
+            <strong>Status:</strong> {{ tele.status }}
+        </div>
+    {% empty %}
+        <p>Nenhuma teleconsulta finalizada encontrada.</p>
+    {% endfor %}
+
+    <h2>Exames Finalizados</h2>
+    {% for exame in exames %}
+        <div class="registro">
+            <strong>Tipo:</strong> {{ exame.tipo }}<br>
+            <strong>Data:</strong> {{ exame.data }}<br>
+            <strong>Status:</strong> {{ exame.status }}
+        </div>
+    {% empty %}
+        <p>Nenhum exame finalizado encontrado.</p>
+    {% endfor %}
+</div>
+{% endblock %}

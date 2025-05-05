@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 12pt;
+      margin: 40px;
+    }
+    h1 {
+      text-align: center;
+      font-size: 18pt;
+    }
+    .footer {
+      margin-top: 50px;
+      font-size: 10pt;
+      text-align: right;
+    }
+    hr {
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Laudo Médico</h1>
+
+  <p><strong>Paciente:</strong> {{ laudo.paciente.get_full_name }}</p>
+  <p><strong>Médico:</strong> {{ laudo.medico.get_full_name }}</p>
+  <p><strong>Data:</strong> {{ laudo.criado_em|date:"d/m/Y H:i" }}</p>
+
+  <hr>
+
+  <p>{{ laudo.conteudo|linebreaksbr }}</p>
+
+  <div class="footer">
+    <p>Assinatura do médico: _______________________________</p>
+  </div>
+</body>
+</html>
+

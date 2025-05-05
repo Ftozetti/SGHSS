@@ -176,3 +176,155 @@ class Consulta(AtendimentoBase):
 
     def __str__(self):
         return f"Consulta de {self.paciente.get_full_name()} com {self.medico.get_full_name()} em {self.agenda.data} às {self.agenda.horario_inicio}"
+    
+#Classe para criação de laudos, atestados e receitas
+class Laudo(models.Model):
+    consulta = models.ForeignKey(Consulta, on_delete=models.CASCADE, related_name='laudos')
+    medico = models.ForeignKey(
+        Usuario, on_delete=models.CASCADE,
+        limit_choices_to={'role': 'medico'},
+        related_name='laudos_emitidos'
+    )
+    paciente = models.ForeignKey(
+        Usuario, on_delete=models.CASCADE,
+        limit_choices_to={'role': 'paciente'},
+        related_name='laudos_recebidos'
+    )
+    conteudo = models.TextField()
+    criado_em = models.DateTimeField(auto_now_add=True)
+    arquivo_pdf = models.FileField(upload_to='documentos/laudos/', null=True, blank=True)
+
+
+class Receita(models.Model):
+    consulta = models.ForeignKey(Consulta, on_delete=models.CASCADE, related_name='receitas')
+    medico = models.ForeignKey(
+        Usuario, on_delete=models.CASCADE,
+        limit_choices_to={'role': 'medico'},
+        related_name='receitas_emitidas'
+    )
+    paciente = models.ForeignKey(
+        Usuario, on_delete=models.CASCADE,
+        limit_choices_to={'role': 'paciente'},
+        related_name='receitas_recebidas'
+    )
+    conteudo = models.TextField()
+    criado_em = models.DateTimeField(auto_now_add=True)
+    arquivo_pdf = models.FileField(upload_to='documentos/receitas/', null=True, blank=True)
+
+
+class Atestado(models.Model):
+    consulta = models.ForeignKey(Consulta, on_delete=models.CASCADE, related_name='atestados')
+    medico = models.ForeignKey(
+        Usuario, on_delete=models.CASCADE,
+        limit_choices_to={'role': 'medico'},
+        related_name='atestados_emitidos'
+    )
+    paciente = models.ForeignKey(
+        Usuario, on_delete=models.CASCADE,
+        limit_choices_to={'role': 'paciente'},
+        related_name='atestados_recebidos'
+    )
+    conteudo = models.TextField()
+    criado_em = models.DateTimeField(auto_now_add=True)
+    arquivo_pdf = models.FileField(upload_to='documentos/atestados/', null=True, blank=True)
+
+#Model para a criação de um prontuário para o paciente
+class Prontuario(models.Model):
+    paciente = models.OneToOneField(Usuario, on_delete=models.CASCADE, limit_choices_to={'tipo': 'paciente'})
+    alergias = models.TextField(blank=True)
+    tratamentos = models.TextField(blank=True)
+    historico_cirurgias = models.TextField(blank=True)
+    observacoes_medicas = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"Prontuário de {self.paciente.get_full_name()}"
+    
+# Classe Teleconsulta
+class Teleconsulta(AtendimentoBase):
+    valor = models.DecimalField(max_digits=8, decimal_places=2, default=125.00)
+
+    # sobrescrevendo campos herdados para evitar conflito
+    medico = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        limit_choices_to={'role': 'medico'},
+        related_name='teleconsultas_como_medico'
+    )
+    paciente = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        limit_choices_to={'role': 'paciente'},
+        related_name='teleconsultas_como_paciente'
+    )
+    agenda = models.ForeignKey(
+        Agenda,
+        on_delete=models.PROTECT,
+        related_name='agendas_de_teleconsultas'
+    )
+    cancelado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='teleconsultas_canceladas'
+    )
+
+    def __str__(self):
+        return f"Teleconsulta de {self.paciente.get_full_name()} com {self.medico.get_full_name()} em {self.agenda.data} às {self.agenda.horario_inicio}"
+
+
+#definição dos valores de cada procedimento, os valores aqui são colocados de forma aleatoria, apenas para
+#instruir o funcionamento do sistema e a criação de relatorios financeiros que serão criados posteiormente
+class Exame(AtendimentoBase):
+    TIPO_CHOICES = [
+        ('radiografia', 'Radiografia (Raio-X)'),
+        ('ultrassonografia', 'Ultrassonografia'),
+        ('tomografia', 'Tomografia Computadorizada (TC)'),
+        ('mamografia', 'Mamografia'),
+        ('doppler', 'Doppler (Ultrassom Vascular)'),
+    ]
+
+    VALORES = {
+        'radiografia': 250.00,
+        'ultrassonografia': 300.00,
+        'tomografia': 800.00,
+        'mamografia': 400.00,
+        'doppler': 500.00,
+    }
+
+    tipo = models.CharField(max_length=30, choices=TIPO_CHOICES)
+    valor = models.DecimalField(max_digits=8, decimal_places=2, default=0.00)
+
+    # sobrescrevendo campos herdados para evitar conflito
+    medico = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        limit_choices_to={'role': 'medico'},
+        related_name='exames_como_medico'
+    )
+    paciente = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        limit_choices_to={'role': 'paciente'},
+        related_name='exames_como_paciente'
+    )
+    agenda = models.ForeignKey(
+        Agenda,
+        on_delete=models.PROTECT,
+        related_name='agendas_de_exames'
+    )
+    cancelado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='exames_cancelados'
+    )
+
+    def save(self, *args, **kwargs):
+        if not self.valor:
+            self.valor = self.VALORES.get(self.tipo, 0.00)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Exame de {self.get_tipo_display()} para {self.paciente.get_full_name()} em {self.agenda.data}"

@@ -4,10 +4,20 @@ from django.utils.timezone import make_aware
 from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from .models import Sala, Agenda, Consulta, Usuario
-from .forms import SalaForm, AgendaForm, ConsultaForm, CancelamentoConsultaForm
+from .models import (Sala, Agenda, Consulta, Usuario, Prontuario, Exame, Teleconsulta, Laudo, 
+                     Receita, Atestado
+)
+from .forms import (SalaForm, AgendaForm, ConsultaForm, 
+                    CancelamentoConsultaForm, LaudoForm, ReceitaForm, AtestadoForm, ProntuarioForm,
+                    ObservacoesConsultaForm, SelecionarPacienteForm                    
+)
 from .decorators import role_required
 from django import forms
+from django.template.loader import render_to_string
+from django.http import HttpResponse, FileResponse, HttpResponseForbidden
+from xhtml2pdf import pisa
+import io
+from django.core.files.base import ContentFile
 
 
 
@@ -223,9 +233,10 @@ def agendar_consulta(request):
 
             # Verifica se o bloco de agenda está disponível
             agenda = consulta.agenda
-            if agenda.procedimento != 'consulta' or agenda.status == "Agendado":
+            if agenda.procedimento != 'consulta' or agenda.consultas.exclude(status='cancelada').exists():
                 messages.error(request, 'Horário indisponível.')
                 return redirect('agendar_consulta')
+
 
             # Verifica se o médico do agendamento bate com o da agenda
             if consulta.medico != agenda.medico:
@@ -235,9 +246,8 @@ def agendar_consulta(request):
             # Verifica se o paciente já tem outro procedimento no mesmo horário
             conflito = Consulta.objects.filter(
                 paciente=consulta.paciente,
-                agenda=agenda,
-                status='agendada'
-            ).exists()
+                agenda=agenda
+            ).exclude(status='cancelada').exists()
             if conflito:
                 messages.error(request, 'Já existe uma consulta agendada neste horário.')
                 return redirect('agendar_consulta')
@@ -260,49 +270,261 @@ def agendar_consulta(request):
     return render(request, 'consultas/form_agendamento.html', {'form': form})
 
 #View para a listagem de consultas
-@role_required('paciente', 'administrativo', 'medico')
+@role_required('medico')
 def lista_consultas(request):
-    usuario = request.user
-    if usuario.role == 'paciente':
-        consultas = Consulta.objects.filter(paciente=usuario).order_by('-agenda__data')
-    elif usuario.role == 'medico':
-        consultas = Consulta.objects.filter(medico=usuario).order_by('-agenda__data')
-    elif usuario.role == 'administrativo':
-        consultas = Consulta.objects.all().order_by('-agenda__data')
-    else:
-        consultas = []
-
+    consultas = Consulta.objects.filter(medico=request.user).order_by('-agenda__data')
     return render(request, 'consultas/lista_consultas.html', {'consultas': consultas})
 
 #view para cancelamento de consulta
 @role_required('paciente', 'administrativo')
 def cancelar_consulta(request, consulta_id):
-    consulta = get_object_or_404(Consulta, id=consulta_id)
+    consulta = get_object_or_404(Consulta, pk=consulta_id)
+
+    # Garante que pacientes só possam cancelar suas próprias consultas
+    if request.user.role == 'paciente' and consulta.paciente != request.user:
+        return render(request, '403.html', status=403)
 
     if request.method == 'POST':
-        form = CancelamentoConsultaForm(request.POST)
+        consulta.status = 'cancelada'
+        consulta.save()
+
+        # Redireciona de acordo com o perfil
+        if request.user.role == 'paciente':
+            return redirect('consultas_usuario')
+        elif request.user.role == 'administrativo':
+            return redirect('consultas_usuario')
+
+    form = CancelamentoConsultaForm()
+    return render(request, 'consultas/cancelar_consulta.html', {'consulta': consulta, 'form': form})
+
+
+
+#View para iniciar consulta
+@role_required('medico')
+def iniciar_consulta(request, pk):
+    consulta = get_object_or_404(Consulta, pk=pk, medico=request.user)
+    
+    if consulta.status != 'agendada':
+        messages.error(request, 'A consulta não pode ser iniciada.')
+        return redirect('lista_consultas')
+
+    consulta.status = 'em atendimento'
+    consulta.save()
+    
+    return redirect('detalhar_consulta', pk=consulta.pk)
+
+#view para detalhar a consulta
+@role_required('medico')
+def detalhar_consulta(request, pk):
+    consulta = get_object_or_404(Consulta, pk=pk, medico=request.user)
+
+    if request.method == 'POST':
+        form = ObservacoesConsultaForm(request.POST, instance=consulta)
         if form.is_valid():
-            consulta.status = 'cancelada'
-            consulta.cancelado_por = request.user
-            consulta.motivo_cancelamento = form.cleaned_data.get('motivo_cancelamento')
-            consulta.save()
-
-            agenda = consulta.agenda
-            liberar_horario = form.cleaned_data.get('liberar_horario')
-
-            # Só bloqueia o horário se for administrativo E ele optar por não liberar
-            if request.user.role == 'administrativo' and not liberar_horario:
-                agenda.status_manual = 'bloqueado'
-            else:
-                agenda.status_manual = 'livre'
-            agenda.save()
-
-            messages.success(request, 'Consulta cancelada com sucesso.')
-            return redirect('lista_consultas')
+            form.save()
+            messages.success(request, 'Observações atualizadas com sucesso.')
+            return redirect('detalhar_consulta', pk=pk)
     else:
-        form = CancelamentoConsultaForm()
+        form = ObservacoesConsultaForm(instance=consulta)
 
-    return render(request, 'consultas/cancelar_consulta.html', {
+    return render(request, 'consultas/detalhar_consulta.html', {
         'consulta': consulta,
-        'form': form,
+        'form_observacoes': form
     })
+
+#View que permite o cancelamento do atendimento e retorna o status para agendado
+@role_required('medico')
+def cancelar_atendimento(request, pk):
+    consulta = get_object_or_404(Consulta, pk=pk, medico=request.user)
+    if request.method == 'POST' and consulta.status == 'em atendimento':
+        consulta.status = 'agendada'
+        consulta.save()
+    return redirect('lista_consultas')
+
+# view que encerra o atendimento e altera o status para finalizada
+@role_required('medico')
+def encerrar_atendimento(request, pk):
+    consulta = get_object_or_404(Consulta, pk=pk, medico=request.user)
+    if request.method == 'POST' and consulta.status == 'em atendimento':
+        consulta.status = 'finalizada'
+        consulta.save()
+    return redirect('lista_consultas') 
+
+#View para emissão de laudo em pdf
+@role_required('medico')
+def emitir_laudo(request, pk):
+    consulta = get_object_or_404(Consulta, id=pk)
+
+    if request.method == 'POST':
+        form = LaudoForm(request.POST)
+        if form.is_valid():
+            laudo = form.save(commit=False)
+            laudo.consulta = consulta
+            laudo.medico = request.user
+            laudo.paciente = consulta.paciente
+            laudo.save()
+
+            html = render_to_string('consultas/laudo_pdf.html', {'laudo': laudo})
+            resultado = io.BytesIO()
+            pisa.CreatePDF(io.BytesIO(html.encode('utf-8')), dest=resultado)
+
+            laudo.arquivo_pdf.save(f'laudo_{laudo.id}.pdf', ContentFile(resultado.getvalue()))
+            laudo.save()
+
+            return redirect('detalhar_consulta', pk=consulta.id)
+    else:
+        form = LaudoForm()
+
+    return render(request, 'consultas/form_laudo.html', {'consulta': consulta, 'form': form})
+
+#View para visualizar laudo
+@role_required('medico', 'paciente', 'administrativo')
+def visualizar_laudo(request, laudo_id):
+    laudo = get_object_or_404(Laudo, id=laudo_id)
+
+    # Verifica se o usuário tem permissão
+    if request.user != laudo.medico and request.user != laudo.paciente and request.user.role != 'administrativo':
+        return HttpResponseForbidden("Você não tem permissão para acessar este laudo.")
+
+    if laudo.arquivo_pdf:
+        return FileResponse(laudo.arquivo_pdf.open('rb'), content_type='application/pdf')
+    return HttpResponse("Arquivo não encontrado.", status=404)
+
+
+#View para emissão de atestados
+@role_required('medico')
+def emitir_atestado(request, pk):
+    consulta = get_object_or_404(Consulta, id=pk)
+
+    if request.method == 'POST':
+        form = AtestadoForm(request.POST)
+        if form.is_valid():
+            atestado = form.save(commit=False)
+            atestado.consulta = consulta
+            atestado.medico = request.user
+            atestado.paciente = consulta.paciente
+            atestado.save()
+
+        html = render_to_string('consultas/atestado_pdf.html', {'atestado': atestado})
+        resultado = io.BytesIO()
+        pisa.CreatePDF(io.BytesIO(html.encode('utf-8')), dest=resultado)
+
+        atestado.arquivo_pdf.save(f'atestado_{atestado.id}.pdf', ContentFile(resultado.getvalue()))
+        atestado.save()
+
+        return redirect('detalhar_consulta', pk=consulta.id)
+    
+    else:
+        form = AtestadoForm()
+
+    return render(request, 'consultas/form_atestado.html', {'consulta': consulta, 'form': form})
+
+#view para visualizar atestado
+@role_required('medico', 'paciente', 'administrativo')
+def visualizar_atestado(request, atestado_id):
+    atestado = get_object_or_404(Atestado, id=atestado_id)
+
+    if request.user != atestado.medico and request.user != atestado.paciente and request.user.role != 'administrativo':
+        return HttpResponseForbidden("Você não tem permissão para acessar este atestado.")
+
+    if atestado.arquivo_pdf:
+        return FileResponse(atestado.arquivo_pdf.open('rb'), content_type='application/pdf')
+    return HttpResponse("Arquivo não encontrado.", status=404)
+
+#View para a emissão de receitas
+@role_required('medico')
+def emitir_receita(request, pk):
+    consulta = get_object_or_404(Consulta, id=pk)
+
+    if request.method == 'POST':
+        form = ReceitaForm(request.POST)
+        if form.is_valid():
+            receita = form.save(commit=False)
+            receita.consulta = consulta
+            receita.medico = request.user
+            receita.paciente = consulta.paciente
+            receita.save()
+
+            html = render_to_string('consultas/receita_pdf.html', {'receita': receita})
+            resultado = io.BytesIO()
+            pisa.CreatePDF(io.BytesIO(html.encode('utf-8')), dest=resultado)
+
+            receita.arquivo_pdf.save(f'receita_{receita.id}.pdf', ContentFile(resultado.getvalue()))
+            receita.save()
+
+            return redirect('detalhar_consulta', pk=consulta.id)
+    else:
+        form = ReceitaForm()
+
+    return render(request, 'consultas/form_receita.html', {'consulta': consulta, 'form': form})
+
+
+#View de visualização de receitas
+@role_required('medico', 'paciente', 'administrativo')
+def visualizar_receita(request, receita_id):
+    receita = get_object_or_404(Receita, id=receita_id)
+
+    if request.user != receita.medico and request.user != receita.paciente and request.user.role != 'administrativo':
+        return HttpResponseForbidden("Você não tem permissão para acessar esta receita.")
+
+    if receita.arquivo_pdf:
+        return FileResponse(receita.arquivo_pdf.open('rb'), content_type='application/pdf')
+    return HttpResponse("Arquivo não encontrado.", status=404)
+
+#View para a visualização do prontuario
+@role_required('medico')
+def visualizar_prontuario(request, paciente_id):
+    paciente = get_object_or_404(Usuario, id=paciente_id, role='paciente')
+    prontuario, created = Prontuario.objects.get_or_create(paciente=paciente)
+
+    if request.method == 'POST':
+        form = ProntuarioForm(request.POST, instance=prontuario)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Prontuário atualizado com sucesso.')
+            return redirect('visualizar_prontuario', paciente_id=paciente.id)
+    else:
+        form = ProntuarioForm(instance=prontuario)
+
+    consultas = Consulta.objects.filter(paciente=paciente, status='finalizada')
+    exames = Exame.objects.filter(paciente=paciente, status='finalizado')
+    teleconsultas = Teleconsulta.objects.filter(paciente=paciente, status='finalizada')
+
+    return render(request, 'consultas/prontuario.html', {
+        'paciente': paciente,
+        'form': form,
+        'consultas': consultas,
+        'exames': exames,
+        'teleconsultas': teleconsultas
+    })
+
+# View para seleção de paciente antes de abrir o prontuário quando fora de consulta
+def selecionar_paciente_prontuario(request):
+    if request.method == 'POST':
+        form = SelecionarPacienteForm(request.POST)
+        if form.is_valid():
+            paciente = form.cleaned_data['paciente']
+            return redirect('visualizar_prontuario', paciente_id=paciente.id)
+    else:
+        form = SelecionarPacienteForm()
+
+    return render(request, 'consultas/selecionar_paciente.html', {'form': form})
+
+#View separada para paciente e administrativo, para evitar problemas com funções exclusivas de medico
+@role_required('paciente', 'administrativo')
+def consultas_usuario(request):
+    usuario = request.user
+    if usuario.role == 'paciente':
+        consultas = Consulta.objects.filter(paciente=usuario).order_by('-agenda__data')
+    elif usuario.role == 'administrativo':
+        consultas = Consulta.objects.all().order_by('-agenda__data')
+    return render(request, 'consultas/consultas_usuario.html', {'consultas': consultas})
+
+#View para consultas de consultas, :O
+@role_required('paciente', 'administrativo')
+def detalhar_consulta_usuario(request, pk):
+    consulta = get_object_or_404(Consulta, pk=pk)
+    if request.user.role == 'paciente' and consulta.paciente != request.user:
+        return render(request, '403.html', status=403)
+    return render(request, 'consultas/detalhar_consulta_usuario.html', {'consulta': consulta})
+

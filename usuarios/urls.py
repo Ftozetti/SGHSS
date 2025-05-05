@@ -20,5 +20,21 @@ urlpatterns = [
     path('agenda/<int:pk>/desbloquear/', views.desbloquear_agenda, name='desbloquear_agenda'),
     path('consultas/', views.lista_consultas, name='lista_consultas'),
     path('consultas/agendar/', views.agendar_consulta, name='agendar_consulta'),
-    path('consultas/<int:consulta_id>/cancelar/', views.cancelar_consulta, name='cancelar_consulta'),
+    path('consultas/<int:pk>/cancelar/', views.cancelar_atendimento, name='cancelar_atendimento'),
+    path('consultas/<int:pk>/encerrar/', views.encerrar_atendimento, name='encerrar_atendimento'),
+    path('consultas/<int:pk>/iniciar/', views.iniciar_consulta, name='iniciar_consulta'),
+    path('consultas/<int:pk>/detalhar/', views.detalhar_consulta, name='detalhar_consulta'),
+    path('consultas/<int:pk>/emitir-laudo/', views.emitir_laudo, name='emitir_laudo'),
+    path('consultas/<int:pk>/emitir-atestado/', views.emitir_atestado, name='emitir_atestado'),      
+    path('consultas/<int:pk>/emitir-receita/', views.emitir_receita, name='emitir_receita'),
+    path('prontuario/<int:paciente_id>/', views.visualizar_prontuario, name='visualizar_prontuario'),
+    path('prontuario/selecionar/', views.selecionar_paciente_prontuario, name='selecionar_paciente_prontuario'),
+    path('consultas/usuario/', views.consultas_usuario, name='consultas_usuario'),
+    path('consultas/usuario/<int:pk>/detalhar/', views.detalhar_consulta_usuario, name='detalhar_consulta_usuario'),
+    path('consultas/cancelar/<int:consulta_id>/', views.cancelar_consulta, name='cancelar_consulta'),
+    path('documentos/laudo/<int:laudo_id>/', views.visualizar_laudo, name='visualizar_laudo'),
+    path('documentos/receita/<int:receita_id>/', views.visualizar_receita, name='visualizar_receita'),
+    path('documentos/atestado/<int:atestado_id>/', views.visualizar_atestado, name='visualizar_atestado'),
+
+
 ]

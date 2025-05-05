@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Emitir Atestado – Consulta com {{ consulta.paciente.get_full_name }}</h2>
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit" class="btn btn-success">Gerar PDF</button>
+</form>
+{% endblock %}

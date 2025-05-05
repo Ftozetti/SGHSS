@@ -14,6 +14,9 @@
         Visualizando suas consultas agendadas.
     {% endif %}
 </p>
+<div class="mb-3">
+    <a href="{% url 'redirecionar_dashboard' %}" class="btn btn-secondary">🏠 Retornar à Home</a>
+</div>
 
 {% if consultas %}
 <table class="table table-striped">
@@ -36,10 +39,29 @@
             <td>{{ consulta.paciente.get_full_name }}</td>
             <td>{{ consulta.status|default:"Agendada" }}</td>
             <td>
-                {% if consulta.status != 'cancelada' %}
+                {% if consulta.status != 'cancelada' and request.user.role != 'medico' %}
                     <a href="{% url 'cancelar_consulta' consulta.id %}" class="btn btn-sm btn-danger">Cancelar</a>
                 {% endif %}
+            
+                {% if request.user.role == 'medico' %}
+                    {% if consulta.status == 'agendada' %}
+                        <a href="{% url 'iniciar_consulta' consulta.id %}" class="btn btn-sm btn-success"
+                           onclick="return confirm('Deseja realmente iniciar esta consulta?');">
+                            Iniciar Consulta
+                        </a>
+                    {% elif consulta.status == 'em atendimento' %}
+                        <a href="{% url 'detalhar_consulta' consulta.id %}" class="btn btn-sm btn-warning">
+                            Acessar Consulta
+                        </a>
+                    {% elif consulta.status == 'finalizada' %}
+                        <a href="{% url 'detalhar_consulta' consulta.id %}" class="btn btn-sm btn-info">
+                            Consultar
+                        </a>
+                    {% endif %}
+                {% endif %}
             </td>
+            
+            
         </tr>
         {% endfor %}
     </tbody>

@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="container mt-4">
+    <h2>Selecionar Paciente para Visualizar Prontuário</h2>
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label for="paciente" class="form-label">Paciente:</label>
+        {{ form.paciente }}
+      </div>
+      <button type="submit" class="btn btn-primary">Visualizar Prontuário</button>
+    </form>
+  </div>
+{% endblock %}

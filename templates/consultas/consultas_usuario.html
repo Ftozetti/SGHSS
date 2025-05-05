@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Consultas</h2>
+
+    <table class="table table-bordered table-hover">
+        <thead class="table-light">
+            <tr>
+                <th>Data</th>
+                <th>Horário</th>
+                <th>Médico</th>
+                <th>Paciente</th>
+                <th>Status</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for consulta in consultas %}
+                <tr>
+                    <td>{{ consulta.agenda.data }}</td>
+                    <td>{{ consulta.agenda.horario_inicio }} às {{ consulta.agenda.horario_fim }}</td>
+                    <td>{{ consulta.medico.get_full_name }}</td>
+                    <td>{{ consulta.paciente.get_full_name }}</td>
+                    <td>{{ consulta.get_status_display }}</td>
+                    <td>
+                        {% if consulta.status == 'agendada' %}
+                            <a href="{% url 'cancelar_consulta' consulta.id %}" class="btn btn-sm btn-danger">
+                                Cancelar
+                            </a>
+                        {% endif %}
+
+                        {% if consulta.status == 'em atendimento' or consulta.status == 'finalizada' %}
+                            <a href="{% url 'detalhar_consulta_usuario' consulta.id %}" class="btn btn-sm btn-primary">
+                                Consultar
+                            </a>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center">Nenhuma consulta encontrada.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="{% url 'redirecionar_dashboard' %}" class="btn btn-secondary">🏠 Retornar ao Dashboard</a>
+</div>
+{% endblock %}
