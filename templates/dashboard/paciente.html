@@ -9,7 +9,7 @@
   <div class="col-md-4">
     <div class="card p-3">
       <h5 class="card-title">Consultas</h5>
-      <a href="{% url 'consultas_usuario' %}" class="btn btn-outline-light mt-2">Minhas Consultas</a>
+      <a class="btn btn-outline-primary mt-2" href="{% url 'consultas_usuario' %}">Minhas Consultas</a>
       <a href="{% url 'agendar_consulta' %}" class="btn btn-outline-light mt-2">Agendar Consulta</a>
     </div>
   </div>
@@ -17,16 +17,16 @@
   <div class="col-md-4">
     <div class="card p-3">
       <h5 class="card-title">Exames</h5>
-      <a href="#" class="btn btn-outline-light mt-2">Meus Exames</a>
-      <a href="#" class="btn btn-outline-light mt-2">Agendar Exame</a>
+      <a class="btn btn-outline-primary mt-2" href="{% url 'exames_usuario' %}">Meus Exames</a>
+      <a href="{% url 'agendar_exame' %}" class="btn btn-outline-light mt-2">Agendar Exame</a>
     </div>
   </div>
 
   <div class="col-md-4">
     <div class="card p-3">
       <h5 class="card-title">Teleconsultas</h5>
-      <a href="#" class="btn btn-outline-light mt-2">Minhas Teleconsultas</a>
-      <a href="#" class="btn btn-outline-light mt-2">Agendar Teleconsulta</a>
+      <a class="btn btn-outline-primary mt-2" href="{% url 'teleconsultas_usuario' %}">Minhas Teleconsultas</a>
+      <a href="{% url 'agendar_teleconsulta' %}" class="btn btn-outline-light mt-2">Agendar Teleconsulta</a>
       <a href="#" class="btn btn-outline-warning mt-2">Entrar na Fila de Atendimento</a>
     </div>
   </div>

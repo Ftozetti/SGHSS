@@ -1,19 +1,11 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ form.instance.pk|yesno:"Editar Agenda,Nova Agenda" }}{% endblock %}
+{% block title %}Agendar Teleconsulta{% endblock %}
 
 {% block content %}
+
 <div class="container mt-4">
-    <h2 class="mb-4">
-        {{ form.instance.pk|yesno:"Editar Agenda,Nova Agenda" }}
-        {% if tipo == 'consulta' %}
-            de Consulta
-        {% elif tipo == 'exame' %}
-            de Exame
-        {% elif tipo == 'teleconsulta' %}
-            de Teleconsulta
-        {% endif %}
-    </h2>
+    <h2 class="mb-4">Agendamento de Teleconsulta</h2>
 
     <form method="post">
         {% csrf_token %}
@@ -30,8 +22,13 @@
             </div>
         {% endfor %}
 
-        <button type="submit" class="btn btn-success">Salvar</button>
-        <a href="{% url 'dashboard_administrativo' %}" class="btn btn-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-success">Agendar</button>
+        <a href="{% if request.user.role == 'paciente' %}
+            {% url 'dashboard_paciente' %}
+         {% else %}
+            {% url 'dashboard_administrativo' %}
+         {% endif %}" 
+   class="btn btn-secondary">Cancelar</a>
     </form>
 </div>
 {% endblock %}

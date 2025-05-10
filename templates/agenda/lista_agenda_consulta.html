@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}Agenda de Consultas{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Agenda de Consultas</h2>
+
+    <a class="btn btn-primary mb-3" href="{% url 'criar_agenda_consulta' %}">Nova Agenda</a>
+
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Início</th>
+                <th>Fim</th>
+                <th>Médico</th>
+                <th>Sala</th>
+                <th>Status</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for agenda in agendas %}
+                <tr>
+                    <td>{{ agenda.data }}</td>
+                    <td>{{ agenda.horario_inicio }}</td>
+                    <td>{{ agenda.horario_fim }}</td>
+                    <td>{{ agenda.medico.get_full_name }}</td>
+                    <td>{{ agenda.sala.numero }}</td>
+                    <td>
+                        {% if agenda.status_manual == 'bloqueado' %}
+                            Bloqueado
+                        {% elif agenda.tem_consulta_ativa %}
+                            Ocupado
+                        {% else %}
+                            Livre
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'editar_agenda_consulta' agenda.pk %}" class="btn btn-sm btn-warning">Editar</a>
+                        <a href="{% url 'excluir_agenda_consulta' agenda.pk %}" class="btn btn-sm btn-danger">Excluir</a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="7" class="text-center">Nenhuma agenda cadastrada.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

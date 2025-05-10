@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}Minhas Teleconsultas{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Teleconsultas</h2>
+
+    <a href="{% url 'agendar_teleconsulta' %}" class="btn btn-primary mb-3">Agendar Nova Teleconsulta</a>
+
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Horário</th>
+                <th>Médico</th>
+                <th>Status</th>
+                <th>Valor</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tele in teleconsultas %}
+                <tr>
+                    <td>{{ tele.agenda.data }}</td>
+                    <td>{{ tele.agenda.horario_inicio }}</td>
+                    <td>{{ tele.medico.get_full_name }}</td>
+                    <td>{{ tele.get_status_display }}</td>
+                    <td>R$ {{ tele.valor }}</td>
+                    <td>
+                        {% if tele.status != "cancelada" %}
+                            <a href="{% url 'cancelar_teleconsulta' tele.id %}" class="btn btn-danger btn-sm">Cancelar</a>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="6" class="text-center">Nenhuma teleconsulta encontrada.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="mt-3">
+        <a href="{% url 'redirecionar_dashboard' %}" class="btn btn-secondary">🏠 Retornar ao Dashboard</a>
+    </div>
+</div>
+{% endblock %}

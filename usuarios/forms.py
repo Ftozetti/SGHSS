@@ -1,5 +1,7 @@
 from django import forms
-from .models import Sala, Agenda, Consulta, Laudo, Receita, Atestado, Prontuario, Usuario
+from .models import (Sala, AgendaConsulta, Consulta, Laudo, Receita, Atestado, Prontuario, 
+                     Usuario, AgendaExame, AgendaTeleconsulta, Exame, Teleconsulta
+)
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.db.models import Q
@@ -14,10 +16,21 @@ class SalaForm(forms.ModelForm):
             'observacoes': forms.Textarea(attrs={'rows': 2}),
         }
 
-#formulário para a criação de agenda
-class AgendaForm(forms.ModelForm):
+#formulário para a criação de agenda de consulta
+class AgendaConsultaForm(forms.ModelForm):
     class Meta:
-        model = Agenda
+        model = AgendaConsulta
+        fields = '__all__'
+        widgets = {
+            'data': forms.DateInput(attrs={'type': 'date'}),
+            'horario_inicio': forms.TimeInput(attrs={'type': 'time'}),
+            'horario_fim': forms.TimeInput(attrs={'type': 'time'}),
+        }
+
+#Formulário para a criação de agenda de exame
+class AgendaExameForm(forms.ModelForm):
+    class Meta:
+        model = AgendaExame
         fields = '__all__'
         widgets = {
             'data': forms.DateInput(attrs={'type': 'date'}),
@@ -27,67 +40,228 @@ class AgendaForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        procedimento = cleaned_data.get('procedimento')
         tipo_exame = cleaned_data.get('tipo_exame')
+        sala = cleaned_data.get('sala')
+        data = cleaned_data.get('data')
+        horario_inicio = cleaned_data.get('horario_inicio')
+        horario_fim = cleaned_data.get('horario_fim')
+        duracao = cleaned_data.get('duracao_procedimento')
 
-        if procedimento == 'consulta' and tipo_exame:
-            raise ValidationError("Tipo de exame deve estar vazio para consultas.")
+        if not tipo_exame:
+            raise ValidationError("Tipo de exame é obrigatório.")
 
-        if procedimento == 'exame' and not tipo_exame:
-            raise ValidationError("Tipo de exame é obrigatório para exames.")
+        if horario_inicio and horario_fim and horario_inicio >= horario_fim:
+            raise ValidationError("O horário de início deve ser anterior ao horário de fim.")
+
+        if duracao and duracao <= 0:
+            raise ValidationError("A duração do exame deve ser maior que 0 minutos.")
+
+        # Verifica conflitos de sala (pré-checagem simples)
+        if sala and data and horario_inicio and horario_fim:
+            conflitos_sala = AgendaExame.objects.filter(
+                sala=sala,
+                data=data,
+                horario_inicio__lt=horario_fim,
+                horario_fim__gt=horario_inicio
+            ).exists()
+            if conflitos_sala:
+                raise ValidationError("Já existe exame marcado nessa sala e horário.")
 
         return cleaned_data
-    
-#Formulário para o agendamento de consultas
-class ConsultaForm(forms.ModelForm):
+
+#form para agenda de teleconsulta
+class AgendaTeleconsultaForm(forms.ModelForm):
     class Meta:
-        model = Consulta
-        fields = ['paciente', 'medico', 'agenda']  # paciente pode ser ocultado via lógica na view
+        model = AgendaTeleconsulta
+        fields = '__all__'
+        widgets = {
+            'data': forms.DateInput(attrs={'type': 'date'}),
+            'horario_inicio': forms.TimeInput(attrs={'type': 'time'}),
+            'horario_fim': forms.TimeInput(attrs={'type': 'time'}),
+        }
+
+#Form para agendamento de exame
+class ExameForm(forms.ModelForm):
+    class Meta:
+        model = Exame
+        fields = ['paciente', 'medico', 'tipo', 'agenda']
         widgets = {
             'agenda': forms.Select()
         }
 
     def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None)  # pegamos o user da view
+        self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
 
-        # Se for paciente, escondemos o campo 'paciente'
-        if user and user.role == 'paciente':
+        # Remove campo paciente se for um paciente logado
+        if self.user and self.user.role == 'paciente':
             self.fields.pop('paciente')
 
-        # Filtrar agendas disponíveis (do tipo consulta e ativas e sem consulta associada)
-        self.fields['agenda'].queryset = Agenda.objects.filter(
-            procedimento='consulta',
-            ativo=True,
-            status_manual='livre'
-        ).exclude(
-            consultas__status='agendada'
-        ).order_by('data', 'horario_inicio')
+        # IDs para AJAX
+        self.fields['tipo'].widget.attrs.update({'id': 'id_tipo'})
+        self.fields['agenda'].widget.attrs.update({'id': 'id_agenda'})
+
+        # Corrigir erro ao validar: força preenchimento de queryset no POST
+        tipo_exame = (
+            self.data.get('tipo') or
+            (self.instance and getattr(self.instance, 'tipo', None)) or
+            (self.initial and self.initial.get('tipo'))
+        )
+
+        if tipo_exame:
+            self.fields['agenda'].queryset = AgendaExame.objects.filter(
+                tipo_exame=tipo_exame,
+                status_manual='livre'
+            ).order_by('data', 'horario_inicio')
+        else:
+            self.fields['agenda'].queryset = AgendaExame.objects.none()
 
     def clean(self):
         cleaned_data = super().clean()
         agenda = cleaned_data.get('agenda')
-        paciente = cleaned_data.get('paciente') if 'paciente' in cleaned_data else self.initial.get('paciente')
+        paciente = cleaned_data.get('paciente') if 'paciente' in self.fields else self.initial.get('paciente')
+        tipo = cleaned_data.get('tipo')
         medico = cleaned_data.get('medico')
 
-        # Verifica se a agenda já está ocupada (segurança extra)
-        if agenda.consultas.filter(status='agendada').exists():
-            raise ValidationError("Este horário já está agendado.")
+        if not agenda:
+            raise ValidationError("Selecione uma agenda válida.")
 
-        # Valida se o médico da consulta é o mesmo da agenda
+        if agenda.tipo_exame != tipo:
+            raise ValidationError("A agenda selecionada não corresponde ao tipo de exame escolhido.")
+
+        if not agenda.esta_disponivel:
+            raise ValidationError("Este horário está indisponível para agendamento.")
+
+        if paciente:
+            conflito_paciente = Exame.objects.filter(
+                paciente=paciente,
+                agenda__data=agenda.data,
+                agenda__horario_inicio=agenda.horario_inicio
+            ).exclude(status='cancelada').exists()
+            if conflito_paciente:
+                raise ValidationError("Este paciente já possui um exame neste horário.")
+
+        if medico:
+            conflito_medico = Exame.objects.filter(
+                medico=medico,
+                agenda__data=agenda.data,
+                agenda__horario_inicio=agenda.horario_inicio
+            ).exclude(status='cancelada').exists()
+            if conflito_medico:
+                raise ValidationError("Este médico já está agendado neste horário.")
+
+        return cleaned_data
+
+
+#Formulário para o agendamento de consultas
+from django.db.models import Q
+
+class ConsultaForm(forms.ModelForm):
+    class Meta:
+        model = Consulta
+        fields = ['paciente', 'medico', 'agenda']
+        widgets = {
+            'agenda': forms.Select()
+        }
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+        if user and user.role == 'paciente':
+            self.fields.pop('paciente')
+
+        # QuerySet inicial: agendas livres
+        agendas_livres = AgendaConsulta.objects.filter(
+            status_manual='livre'
+        ).order_by('data', 'horario_inicio')
+
+        # Exclui agendas com consulta ativa
+        agendas_disponiveis = agendas_livres.exclude(
+            consultas__status__in=['agendada', 'em_atendimento', 'finalizada']
+        )
+
+        self.fields['agenda'].queryset = agendas_disponiveis
+
+    def clean(self):
+        cleaned_data = super().clean()
+        agenda = cleaned_data.get('agenda')
+        paciente = cleaned_data.get('paciente') if 'paciente' in self.fields else self.initial.get('paciente')
+        medico = cleaned_data.get('medico')
+
+        if not agenda:
+            raise ValidationError("Selecione um horário válido.")
+
+        if not agenda.esta_disponivel:
+            raise ValidationError("Este horário não está disponível para agendamento.")
+
         if agenda and medico and agenda.medico != medico:
-            raise ValidationError("O médico selecionado não corresponde ao da agenda.")
+            raise ValidationError("O médico selecionado não atende neste horário.")
 
-        # Verifica se o paciente já tem atendimento no mesmo horário
-        if paciente and agenda:
+        if paciente:
             conflito = Consulta.objects.filter(
-            paciente=paciente,
-            agenda__data=agenda.data,
-            agenda__horario_inicio=agenda.horario_inicio,
-            status='agendada'
-        ).exists()
+                paciente=paciente,
+                agenda__data=agenda.data,
+                agenda__horario_inicio=agenda.horario_inicio
+            ).exclude(status='cancelada').exists()
             if conflito:
-                raise ValidationError("Este paciente já tem uma consulta ou exame neste horário.")
+                raise ValidationError("Você já possui uma consulta neste horário.")
+
+        return cleaned_data
+
+    
+#Form para teleconsulta agendamento
+class TeleconsultaForm(forms.ModelForm):
+    class Meta:
+        model = Teleconsulta
+        fields = ['paciente', 'medico', 'agenda']
+        widgets = {
+            'agenda': forms.Select()
+        }
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+        # Se for paciente, esconde o campo paciente
+        if user and user.role == 'paciente':
+            self.fields.pop('paciente')
+
+        # Agendas livres
+        agendas_livres = AgendaTeleconsulta.objects.filter(
+            status_manual='livre'
+        ).order_by('data', 'horario_inicio')
+
+        # Exclui agendas que já possuem teleconsulta ativa
+        agendas_disponiveis = agendas_livres.exclude(
+            teleconsultas__status__in=['agendada', 'em_atendimento', 'finalizada']
+        )
+
+        self.fields['agenda'].queryset = agendas_disponiveis
+
+    def clean(self):
+        cleaned_data = super().clean()
+        agenda = cleaned_data.get('agenda')
+        paciente = cleaned_data.get('paciente') if 'paciente' in self.fields else self.initial.get('paciente')
+        medico = cleaned_data.get('medico')
+
+        if not agenda:
+            raise ValidationError("Selecione um horário válido.")
+
+        if not agenda.esta_disponivel:
+            raise ValidationError("Este horário não está disponível para agendamento.")
+
+        if agenda and medico and agenda.medico != medico:
+            raise ValidationError("O médico selecionado não atende neste horário.")
+
+        if paciente:
+            conflito = Teleconsulta.objects.filter(
+                paciente=paciente,
+                agenda__data=agenda.data,
+                agenda__horario_inicio=agenda.horario_inicio
+            ).exclude(status='cancelada').exists()
+            if conflito:
+                raise ValidationError("Você já possui uma teleconsulta neste horário.")
 
         return cleaned_data
 
@@ -143,3 +317,4 @@ class SelecionarPacienteForm(forms.Form):
         label="Selecione um paciente",
         widget=forms.Select(attrs={'class': 'form-control'})
     )
+

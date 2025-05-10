@@ -4,32 +4,46 @@
 
 {% block content %}
 <h2 class="mb-4">Bem-vindo, {{ user.get_full_name }}!</h2>
+<div class="container">
+    <div class="row g-4">
+        <!-- Primeira linha -->
+        <div class="col-md-6">
+            <div class="card p-3">
+                <h5 class="card-title">Consultas e Exames</h5>
+                <a class="btn btn-outline-light mt-2" href="{% url 'agendar_consulta' %}">Agendar Consulta</a>
+                <a class="btn btn-outline-light mt-2" href="{% url 'consultas_usuario' %}">Visualizar Consultas</a>
+                <a class="btn btn-outline-light mt-2" href="{% url 'agendar_exame' %}">Agendar Exame</a>
+                <a class="btn btn-outline-light mt-2" href="{% url 'exames_usuario' %}">Visualizar Exames</a>
+                <a class="btn btn-outline-light mt-2" href="{% url 'agendar_teleconsulta' %}">Agendar Teleconsulta</a>                
+                <a class="btn btn-outline-light mt-2" href="{% url 'teleconsultas_usuario' %}">Visualizar Teleconsultas</a>
+            </div>
+        </div>
 
-<div class="row g-4">
-  <div class="col-md-6">
-    <div class="card p-3">
-      <h5 class="card-title">Consultas e Exames</h5>
-      <a href="{% url 'agendar_consulta' %}" class="btn btn-outline-light mt-2">Agendar Consulta</a>
-      <a href="{% url 'consultas_usuario' %}" class="btn btn-outline-light mt-2">Visualizar Consultas</a>
-      <a href="#" class="btn btn-outline-light mt-2">Agendar Exame</a>
-      <a href="#" class="btn btn-outline-light mt-2">Agendar Teleconsulta</a>
-    </div>
-  </div>
+        <div class="col-md-6">
+            <div class="card p-3">
+                <h5 class="card-title">Materiais</h5>
+                <a class="btn btn-outline-light mt-2" href="#">Inventário de Materiais</a>
+                <a class="btn btn-outline-light mt-2" href="#">Gerar Pedido de Compra</a>
+            </div>
+        </div>
 
-  <div class="col-md-6">
-    <div class="card p-3">
-      <h5 class="card-title">Agenda e Estrutura</h5>
-      <a href="{% url 'lista_salas' %}" class="btn btn-outline-light mt-2">Gerenciar Estrutura</a>
-      <a href="{% url 'lista_agenda' %}" class="btn btn-outline-light mt-2">Agenda Médica</a>
-    </div>
-  </div>
+        <!-- Segunda linha -->
+        <div class="col-md-6">
+            <div class="card p-3">
+                <h5 class="card-title">Agenda Médica</h5>
+                <a class="btn btn-outline-light mt-2" href="{% url 'lista_agenda_consulta' %}">Agenda de Consultas</a>
+                <a class="btn btn-outline-light mt-2" href="{% url 'lista_agenda_teleconsulta' %}">Agenda de Teleconsultas</a>
+                <a class="btn btn-outline-light mt-2" href="{% url 'lista_agenda_exame' %}">Agenda de Exames</a>
+            </div>
+        </div>
 
-  <div class="col-md-6">
-    <div class="card p-3">
-      <h5 class="card-title">Materiais</h5>
-      <a href="#" class="btn btn-outline-light mt-2">Inventário de Materiais</a>
-      <a href="#" class="btn btn-outline-light mt-2">Gerar Pedido de Compra</a>
+        <div class="col-md-6">
+            <div class="card p-3">
+                <h5 class="card-title">Estrutura Física</h5>
+                <a class="btn btn-outline-light mt-2" href="{% url 'lista_salas' %}">Gerenciar Estrutura</a>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 {% endblock %}
+

@@ -4,17 +4,18 @@ from django.utils.timezone import make_aware
 from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from .models import (Sala, Agenda, Consulta, Usuario, Prontuario, Exame, Teleconsulta, Laudo, 
-                     Receita, Atestado
+from .models import (Sala, Consulta, Usuario, Prontuario, Exame, Teleconsulta, Laudo, 
+    Receita, Atestado, AgendaConsulta, AgendaExame, AgendaTeleconsulta
 )
-from .forms import (SalaForm, AgendaForm, ConsultaForm, 
-                    CancelamentoConsultaForm, LaudoForm, ReceitaForm, AtestadoForm, ProntuarioForm,
-                    ObservacoesConsultaForm, SelecionarPacienteForm                    
+from .forms import (SalaForm, ConsultaForm, CancelamentoConsultaForm, LaudoForm, 
+                    ReceitaForm, AtestadoForm, ProntuarioForm, ObservacoesConsultaForm, 
+                    SelecionarPacienteForm, ExameForm, AgendaExameForm, AgendaTeleconsultaForm, 
+                    AgendaConsultaForm, AgendaTeleconsulta, TeleconsultaForm    
 )
 from .decorators import role_required
 from django import forms
 from django.template.loader import render_to_string
-from django.http import HttpResponse, FileResponse, HttpResponseForbidden
+from django.http import HttpResponse, FileResponse, HttpResponseForbidden, JsonResponse
 from xhtml2pdf import pisa
 import io
 from django.core.files.base import ContentFile
@@ -87,21 +88,11 @@ def excluir_sala(request, pk):
         return redirect('lista_salas')
     return render(request, 'estrutura/confirmar_exclusao.html', {'sala': sala})
 
+#Criação de agenda de consultas
 @role_required('administrativo')
-def lista_agenda(request):
-    agendas = Agenda.objects.order_by('data', 'horario_inicio')
-    
-    # Adiciona flag para saber se pode editar ou não
-    for a in agendas:
-        a.tem_consulta_ativa = a.consultas.exclude(status='cancelada').exists()
-
-    return render(request, 'agenda/lista_agenda.html', {'agendas': agendas})
-
-#Criar agenda
-@role_required('administrativo')
-def criar_agenda(request):
+def criar_agenda_consulta(request):
     if request.method == 'POST':
-        form = AgendaForm(request.POST)
+        form = AgendaConsultaForm(request.POST)
         if form.is_valid():
             base_agenda = form.save(commit=False)
 
@@ -109,26 +100,22 @@ def criar_agenda(request):
             fim = datetime.combine(base_agenda.data, base_agenda.horario_fim)
             duracao = timedelta(minutes=base_agenda.duracao_procedimento)
 
-            horarios = []
             atual = inicio
-
             conflitos = []
 
             while atual + duracao <= fim:
                 horario_fim = atual + duracao
 
-                # Verifica conflito de sala
-                conflito_sala = Agenda.objects.filter(
+                conflito_sala = AgendaConsulta.objects.filter(
                     sala=base_agenda.sala,
                     data=base_agenda.data,
                     horario_inicio__lt=horario_fim,
                     horario_fim__gt=atual,
                 ).exists()
 
-                # Verifica conflito de médico (se houver médico)
                 conflito_medico = False
                 if base_agenda.medico:
-                    conflito_medico = Agenda.objects.filter(
+                    conflito_medico = AgendaConsulta.objects.filter(
                         medico=base_agenda.medico,
                         data=base_agenda.data,
                         horario_inicio__lt=horario_fim,
@@ -137,11 +124,8 @@ def criar_agenda(request):
 
                 if conflito_sala or conflito_medico:
                     conflitos.append(atual.strftime("%H:%M"))
-
                 else:
-                    nova = Agenda(
-                        procedimento=base_agenda.procedimento,
-                        tipo_exame=base_agenda.tipo_exame,
+                    nova = AgendaConsulta(
                         medico=base_agenda.medico,
                         sala=base_agenda.sala,
                         data=base_agenda.data,
@@ -158,70 +142,303 @@ def criar_agenda(request):
             else:
                 messages.success(request, "Horários criados com sucesso!")
 
-            return redirect('lista_agenda')
+            return redirect('lista_agenda_consulta')
     else:
-        form = AgendaForm()
+        form = AgendaConsultaForm()
 
-    return render(request, 'agenda/form_agenda.html', {'form': form})
+    return render(request, 'agenda/form_agenda.html', {'form': form, 'tipo': 'consulta'})
 
-#Editar Agenda
+#Criar agenda de exames
 @role_required('administrativo')
-def editar_agenda(request, pk):
-    agenda = get_object_or_404(Agenda, pk=pk)
+def criar_agenda_exame(request):
+    if request.method == 'POST':
+        form = AgendaExameForm(request.POST)
+        if form.is_valid():
+            base_agenda = form.save(commit=False)
 
-    # Impede edição se houver consulta vinculada que não esteja cancelada
+            inicio = datetime.combine(base_agenda.data, base_agenda.horario_inicio)
+            fim = datetime.combine(base_agenda.data, base_agenda.horario_fim)
+            duracao = timedelta(minutes=base_agenda.duracao_procedimento)
+
+            atual = inicio
+            conflitos = []
+
+            while atual + duracao <= fim:
+                horario_fim = atual + duracao
+
+                conflito_sala = AgendaExame.objects.filter(
+                    sala=base_agenda.sala,
+                    data=base_agenda.data,
+                    horario_inicio__lt=horario_fim,
+                    horario_fim__gt=atual,
+                ).exists()
+
+                conflito_medico = False
+                if base_agenda.medico:
+                    conflito_medico = AgendaExame.objects.filter(
+                        medico=base_agenda.medico,
+                        data=base_agenda.data,
+                        horario_inicio__lt=horario_fim,
+                        horario_fim__gt=atual,
+                    ).exists()
+
+                if conflito_sala or conflito_medico:
+                    conflitos.append(atual.strftime("%H:%M"))
+                else:
+                    nova = AgendaExame(
+                        tipo_exame=base_agenda.tipo_exame,
+                        medico=base_agenda.medico,
+                        sala=base_agenda.sala,
+                        data=base_agenda.data,
+                        horario_inicio=atual.time(),
+                        horario_fim=horario_fim.time(),
+                        duracao_procedimento=base_agenda.duracao_procedimento
+                    )
+                    nova.save()
+
+                atual += duracao
+
+            if conflitos:
+                messages.warning(request, f"Horários ignorados por conflito: {', '.join(conflitos)}")
+            else:
+                messages.success(request, "Horários de exame criados com sucesso!")
+
+            return redirect('lista_agenda_exame')
+    else:
+        form = AgendaExameForm()
+
+    return render(request, 'agenda/form_agenda.html', {'form': form, 'tipo': 'exame'})
+
+#Criar agenda de Teleconsultas
+@role_required('administrativo')
+def criar_agenda_teleconsulta(request):
+    if request.method == 'POST':
+        form = AgendaTeleconsultaForm(request.POST)
+        if form.is_valid():
+            base_agenda = form.save(commit=False)
+
+            inicio = datetime.combine(base_agenda.data, base_agenda.horario_inicio)
+            fim = datetime.combine(base_agenda.data, base_agenda.horario_fim)
+            duracao = timedelta(minutes=base_agenda.duracao_procedimento)
+
+            atual = inicio
+            conflitos = []
+
+            while atual + duracao <= fim:
+                horario_fim = atual + duracao
+
+                conflito_medico = AgendaTeleconsulta.objects.filter(
+                    medico=base_agenda.medico,
+                    data=base_agenda.data,
+                    horario_inicio__lt=horario_fim,
+                    horario_fim__gt=atual,
+                ).exists()
+
+                if conflito_medico:
+                    conflitos.append(atual.strftime("%H:%M"))
+                else:
+                    nova = AgendaTeleconsulta(
+                        medico=base_agenda.medico,
+                        sala=base_agenda.sala,
+                        data=base_agenda.data,
+                        horario_inicio=atual.time(),
+                        horario_fim=horario_fim.time(),
+                        duracao_procedimento=base_agenda.duracao_procedimento
+                    )
+                    nova.save()
+
+                atual += duracao
+
+            if conflitos:
+                messages.warning(request, f"Horários ignorados por conflito: {', '.join(conflitos)}")
+            else:
+                messages.success(request, "Horários de teleconsulta criados com sucesso!")
+
+            return redirect('lista_agenda_teleconsulta')
+    else:
+        form = AgendaTeleconsultaForm()
+
+    return render(request, 'agenda/form_agenda.html', {'form': form, 'tipo': 'teleconsulta'})
+
+#Editar Agenda de consultas
+@role_required('administrativo')
+def editar_agenda_consulta(request, pk):
+    agenda = get_object_or_404(AgendaConsulta, pk=pk)
+
     if agenda.consultas.exclude(status='cancelada').exists():
-        messages.error(request, 'Não é possível editar um horário com consultas em andamento, agendadas ou finalizadas.')
-        return redirect('lista_agenda')
+        messages.error(request, 'Não é possível editar um horário com consultas ativas.')
+        return redirect('lista_agenda_consulta')
 
-    form = AgendaForm(request.POST or None, instance=agenda)
+    form = AgendaConsultaForm(request.POST or None, instance=agenda)
     if form.is_valid():
         form.save()
-        return redirect('lista_agenda')
+        return redirect('lista_agenda_consulta')
+
     return render(request, 'agenda/form_agenda.html', {'form': form})
 
-#Excluir Agenda
+#Editar Agenda de exames
 @role_required('administrativo')
-def excluir_agenda(request, pk):
-    agenda = get_object_or_404(Agenda, pk=pk)
+def editar_agenda_exame(request, pk):
+    agenda = get_object_or_404(AgendaExame, pk=pk)
 
-    # Checa se está agendada (ajuste depois conforme sua lógica de agendamento)
+    if agenda.exames.exclude(status='cancelada').exists():
+        messages.error(request, 'Não é possível editar um horário com exames agendados.')
+        return redirect('lista_agenda_exame')
+
+    form = AgendaExameForm(request.POST or None, instance=agenda)
+    if form.is_valid():
+        form.save()
+        return redirect('lista_agenda_exame')
+
+    return render(request, 'agenda/form_agenda.html', {'form': form})
+
+#Editar agenda de teleconsulta
+@role_required('administrativo')
+def editar_agenda_teleconsulta(request, pk):
+    agenda = get_object_or_404(AgendaTeleconsulta, pk=pk)
+
+    if agenda.teleconsultas.exclude(status='cancelada').exists():
+        messages.error(request, 'Não é possível editar um horário com teleconsultas ativas.')
+        return redirect('lista_agenda_teleconsulta')
+
+    form = AgendaTeleconsultaForm(request.POST or None, instance=agenda)
+    if form.is_valid():
+        form.save()
+        return redirect('lista_agenda_teleconsulta')
+
+    return render(request, 'agenda/form_agenda.html', {'form': form})
+
+#Excluir Agenda de consultas
+@role_required('administrativo')
+def excluir_agenda_consulta(request, pk):
+    agenda = get_object_or_404(AgendaConsulta, pk=pk)
+
     if agenda.consultas.exists():
-        messages.error(request, 'Não é possível excluir um horário com consulta agendada. Cancele antes.')
-        return redirect('lista_agenda')
+        messages.error(request, 'Não é possível excluir um horário com consulta agendada.')
+        return redirect('lista_agenda_consulta')
 
     if request.method == 'POST':
         agenda.delete()
-        return redirect('lista_agenda')
+        return redirect('lista_agenda_consulta')
 
     return render(request, 'agenda/excluir_agenda.html', {'agenda': agenda})
 
-#Bloqueio manual de Agenda
+#Excluir Agenda de exame
 @role_required('administrativo')
-def bloquear_agenda(request, pk):
-    agenda = get_object_or_404(Agenda, pk=pk)
+def excluir_agenda_exame(request, pk):
+    agenda = get_object_or_404(AgendaExame, pk=pk)
+
+    if agenda.exames.exists():
+        messages.error(request, 'Não é possível excluir um horário com exame agendado.')
+        return redirect('lista_agenda_exame')
+
+    if request.method == 'POST':
+        agenda.delete()
+        return redirect('lista_agenda_exame')
+
+    return render(request, 'agenda/excluir_agenda.html', {'agenda': agenda})
+
+#Excluir Agenda de teleconsulta
+@role_required('administrativo')
+def excluir_agenda_teleconsulta(request, pk):
+    agenda = get_object_or_404(AgendaTeleconsulta, pk=pk)
+
+    if agenda.teleconsultas.exists():
+        messages.error(request, 'Não é possível excluir um horário com teleconsulta agendada.')
+        return redirect('lista_agenda_teleconsulta')
+
+    if request.method == 'POST':
+        agenda.delete()
+        return redirect('lista_agenda_teleconsulta')
+
+    return render(request, 'agenda/excluir_agenda.html', {'agenda': agenda})
+
+#Bloqueio/Desbloqueio manual de Agenda de consultas
+@role_required('administrativo')
+def bloquear_agenda_consulta(request, pk):
+    agenda = get_object_or_404(AgendaConsulta, pk=pk)
     agenda.status_manual = 'bloqueado'
     agenda.save()
     messages.success(request, 'Horário bloqueado com sucesso.')
-    return redirect('lista_agenda')
+    return redirect('lista_agenda_consulta')
 
-#Desbloqueio Manual de agenda
 @role_required('administrativo')
-def desbloquear_agenda(request, pk):
-    agenda = get_object_or_404(Agenda, pk=pk)
-
-    if agenda.consultas.filter(status='agendada').exists():
-        messages.error(request, 'Não é possível desbloquear um horário com consulta agendada.')
-        return redirect('lista_agenda')
-
+def desbloquear_agenda_consulta(request, pk):
+    agenda = get_object_or_404(AgendaConsulta, pk=pk)
+    if agenda.consultas.exclude(status='cancelada').exists():
+        messages.error(request, 'Não é possível desbloquear um horário com consulta ativa.')
+        return redirect('lista_agenda_consulta')
     agenda.status_manual = 'livre'
     agenda.save()
     messages.success(request, 'Horário desbloqueado com sucesso.')
-    return redirect('lista_agenda')
+    return redirect('lista_agenda_consulta')
 
-#Função para redirecionar a pagina quando usuário tenta acessar pagina sem permissão de acesso
-def erro_403(request, exception=None):
-    return render(request, '403.html', status=403)
+#Bloqueio/Desbloqueio manual de Agenda de exames
+@role_required('administrativo')
+def bloquear_agenda_exame(request, pk):
+    agenda = get_object_or_404(AgendaExame, pk=pk)
+    agenda.status_manual = 'bloqueado'
+    agenda.save()
+    messages.success(request, 'Horário de exame bloqueado com sucesso.')
+    return redirect('lista_agenda_exame')
+
+
+@role_required('administrativo')
+def desbloquear_agenda_exame(request, pk):
+    agenda = get_object_or_404(AgendaExame, pk=pk)
+    if agenda.exames.exclude(status='cancelada').exists():
+        messages.error(request, 'Não é possível desbloquear um horário com exame agendado.')
+        return redirect('lista_agenda_exame')
+    agenda.status_manual = 'livre'
+    agenda.save()
+    messages.success(request, 'Horário de exame desbloqueado com sucesso.')
+    return redirect('lista_agenda_exame')
+
+#Bloqueio/Desbloqueio manual de Agenda de teleconsultas
+@role_required('administrativo')
+def bloquear_agenda_teleconsulta(request, pk):
+    agenda = get_object_or_404(AgendaTeleconsulta, pk=pk)
+    agenda.status_manual = 'bloqueado'
+    agenda.save()
+    messages.success(request, 'Horário de teleconsulta bloqueado com sucesso.')
+    return redirect('lista_agenda_teleconsulta')
+
+
+@role_required('administrativo')
+def desbloquear_agenda_teleconsulta(request, pk):
+    agenda = get_object_or_404(AgendaTeleconsulta, pk=pk)
+    if agenda.teleconsultas.exclude(status='cancelada').exists():
+        messages.error(request, 'Não é possível desbloquear um horário com teleconsulta agendada.')
+        return redirect('lista_agenda_teleconsulta')
+    agenda.status_manual = 'livre'
+    agenda.save()
+    messages.success(request, 'Horário desbloqueado com sucesso.')
+    return redirect('lista_agenda_teleconsulta')
+
+
+#Lista de agenda de consultas
+@role_required('administrativo')
+def lista_agenda_consulta(request):
+    agendas = AgendaConsulta.objects.order_by('data', 'horario_inicio')
+    for a in agendas:
+        a.tem_consulta_ativa = a.consultas.exclude(status='cancelada').exists()
+    return render(request, 'agenda/lista_agenda_consulta.html', {'agendas': agendas})
+
+#Lista de agenda de Exames
+@role_required('administrativo')
+def lista_agenda_exame(request):
+    agendas = AgendaExame.objects.order_by('data', 'horario_inicio')
+    for a in agendas:
+        a.tem_exame_ativo = a.exames.exclude(status='cancelada').exists()
+    return render(request, 'agenda/lista_agenda_exame.html', {'agendas': agendas})
+
+#Lista de agenda de Teleconsultas
+@role_required('administrativo')
+def lista_agenda_teleconsulta(request):
+    agendas = AgendaTeleconsulta.objects.order_by('data', 'horario_inicio')
+    for a in agendas:
+        a.tem_teleconsulta_ativa = a.teleconsultas.exclude(status='cancelada').exists()
+    return render(request, 'agenda/lista_agenda_teleconsulta.html', {'agendas': agendas})
 
 #View para agendamento de consultas
 @role_required('administrativo', 'paciente')
@@ -230,31 +447,30 @@ def agendar_consulta(request):
         form = ConsultaForm(request.POST)
         if form.is_valid():
             consulta = form.save(commit=False)
+            agenda = consulta.agenda  # Deve ser uma instância de AgendaConsulta
 
-            # Verifica se o bloco de agenda está disponível
-            agenda = consulta.agenda
-            if agenda.procedimento != 'consulta' or agenda.consultas.exclude(status='cancelada').exists():
-                messages.error(request, 'Horário indisponível.')
+            # Validação 1: agenda deve ser uma AgendaConsulta válida e disponível
+            if not isinstance(agenda, AgendaConsulta) or not agenda.esta_disponivel:
+                messages.error(request, 'Horário indisponível para agendamento.')
                 return redirect('agendar_consulta')
 
-
-            # Verifica se o médico do agendamento bate com o da agenda
+            # Validação 2: médico da consulta deve coincidir com o da agenda
             if consulta.medico != agenda.medico:
                 messages.error(request, 'O médico selecionado não atende neste horário.')
                 return redirect('agendar_consulta')
 
-            # Verifica se o paciente já tem outro procedimento no mesmo horário
+            # Validação 3: paciente não pode ter outra consulta no mesmo horário
             conflito = Consulta.objects.filter(
                 paciente=consulta.paciente,
-                agenda=agenda
+                agenda__data=agenda.data,
+                agenda__horario_inicio=agenda.horario_inicio
             ).exclude(status='cancelada').exists()
+
             if conflito:
-                messages.error(request, 'Já existe uma consulta agendada neste horário.')
+                messages.error(request, 'Você já possui uma consulta nesse mesmo horário.')
                 return redirect('agendar_consulta')
 
-            # Marca a agenda como ocupada e salva a consulta
-            agenda.ocupado = True
-            agenda.save()
+            # Se passou em todas as validações, salva a consulta
             consulta.valor = 250.00
             consulta.save()
 
@@ -262,12 +478,79 @@ def agendar_consulta(request):
             return redirect('dashboard_paciente' if request.user.role == 'paciente' else 'dashboard_administrativo')
     else:
         form = ConsultaForm()
-        # Se for paciente, oculta o campo paciente
         if request.user.role == 'paciente':
             form.fields['paciente'].initial = request.user
             form.fields['paciente'].widget = forms.HiddenInput()
 
     return render(request, 'consultas/form_agendamento.html', {'form': form})
+
+#Agendamento de Exames
+@role_required('administrativo', 'paciente')
+def agendar_exame(request):
+    if request.method == 'POST':
+        form = ExameForm(request.POST, user=request.user)
+        if form.is_valid():
+            exame = form.save(commit=False)
+            agenda = exame.agenda
+
+            if not isinstance(agenda, AgendaExame) or not agenda.esta_disponivel:
+                messages.error(request, 'Horário indisponível.')
+                return redirect('agendar_exame')
+
+            # Garante que paciente seja atribuído se for um paciente logado
+            if request.user.role == 'paciente':
+                exame.paciente = request.user
+
+            # Define o valor conforme o tipo do exame
+            exame.valor = Exame.VALORES.get(exame.tipo, 0.00)
+            exame.save()
+
+            messages.success(request, 'Exame agendado com sucesso.')
+            return redirect('dashboard_paciente' if request.user.role == 'paciente' else 'dashboard_administrativo')
+    else:
+        form = ExameForm(user=request.user)
+
+    return render(request, 'exames/form_agendamento.html', {'form': form})
+
+#Agendamento de teleconsultas
+@role_required('administrativo', 'paciente')
+def agendar_teleconsulta(request):
+    if request.method == 'POST':
+        form = TeleconsultaForm(request.POST, user=request.user)
+        if form.is_valid():
+            tele = form.save(commit=False)
+            agenda = tele.agenda
+
+            # Atribui automaticamente o paciente se for paciente logado
+            if request.user.role == 'paciente':
+                tele.paciente = request.user
+
+            if not isinstance(agenda, AgendaTeleconsulta) or not agenda.esta_disponivel:
+                messages.error(request, 'Horário indisponível para agendamento.')
+                return redirect('agendar_teleconsulta')
+
+            if tele.medico != agenda.medico:
+                messages.error(request, 'O médico selecionado não atende neste horário.')
+                return redirect('agendar_teleconsulta')
+
+            conflito = Teleconsulta.objects.filter(
+                paciente=tele.paciente,
+                agenda__data=agenda.data,
+                agenda__horario_inicio=agenda.horario_inicio
+            ).exclude(status='cancelada').exists()
+
+            if conflito:
+                messages.error(request, 'Você já possui uma teleconsulta neste horário.')
+                return redirect('agendar_teleconsulta')
+
+            tele.valor = 125
+            tele.save()
+            messages.success(request, 'Teleconsulta agendada com sucesso.')
+            return redirect('dashboard_paciente' if request.user.role == 'paciente' else 'dashboard_administrativo')
+    else:
+        form = TeleconsultaForm(user=request.user)
+
+    return render(request, 'teleconsultas/form_agendamento.html', {'form': form})
 
 #View para a listagem de consultas
 @role_required('medico')
@@ -297,7 +580,43 @@ def cancelar_consulta(request, consulta_id):
     form = CancelamentoConsultaForm()
     return render(request, 'consultas/cancelar_consulta.html', {'consulta': consulta, 'form': form})
 
+#View para cancelar exame
+@role_required('paciente', 'administrativo')
+def cancelar_exame(request, exame_id):
+    exame = get_object_or_404(Exame, pk=exame_id)
 
+    if request.user.role == 'paciente' and exame.paciente != request.user:
+        return render(request, '403.html', status=403)
+
+    if request.method == 'POST':
+        exame.status = 'cancelada'
+        exame.cancelado_por = request.user
+        exame.data_cancelamento = timezone.now()
+        exame.save()
+
+        return redirect('exames_usuario')
+
+    form = CancelamentoConsultaForm()
+    return render(request, 'consultas/cancelar_consulta.html', {'consulta': exame, 'form': form})
+
+#View para cancelar teleconsulta
+@role_required('paciente', 'administrativo')
+def cancelar_teleconsulta(request, teleconsulta_id):
+    tele = get_object_or_404(Teleconsulta, pk=teleconsulta_id)
+
+    if request.user.role == 'paciente' and tele.paciente != request.user:
+        return render(request, '403.html', status=403)
+
+    if request.method == 'POST':
+        tele.status = 'cancelada'
+        tele.cancelado_por = request.user
+        tele.data_cancelamento = timezone.now()
+        tele.save()
+
+        return redirect('teleconsultas_usuario')
+
+    form = CancelamentoConsultaForm()
+    return render(request, 'consultas/cancelar_consulta.html', {'consulta': tele, 'form': form})
 
 #View para iniciar consulta
 @role_required('medico')
@@ -520,6 +839,25 @@ def consultas_usuario(request):
         consultas = Consulta.objects.all().order_by('-agenda__data')
     return render(request, 'consultas/consultas_usuario.html', {'consultas': consultas})
 
+@role_required('paciente', 'administrativo')
+def exames_usuario(request):
+    usuario = request.user
+    if usuario.role == 'paciente':
+        exames = Exame.objects.filter(paciente=usuario).order_by('-agenda__data')
+    else:
+        exames = Exame.objects.all().order_by('-agenda__data')
+    return render(request, 'exames/exames_usuario.html', {'exames': exames})
+
+@role_required('paciente', 'administrativo')
+def teleconsultas_usuario(request):
+    usuario = request.user
+    if usuario.role == 'paciente':
+        teleconsultas = Teleconsulta.objects.filter(paciente=usuario).order_by('-agenda__data')
+    else:
+        teleconsultas = Teleconsulta.objects.all().order_by('-agenda__data')
+    return render(request, 'teleconsultas/teleconsultas_usuario.html', {'teleconsultas': teleconsultas})
+
+
 #View para consultas de consultas, :O
 @role_required('paciente', 'administrativo')
 def detalhar_consulta_usuario(request, pk):
@@ -528,3 +866,26 @@ def detalhar_consulta_usuario(request, pk):
         return render(request, '403.html', status=403)
     return render(request, 'consultas/detalhar_consulta_usuario.html', {'consulta': consulta})
 
+#Para a criação de pagina para exibir o redirecionamento em caso de acesso a pagina sem acesso
+def erro_403(request, exception=None):
+    return render(request, '403.html', status=403)
+
+#View adicionada para permitir o dinamismo na consulta de horarios livres de exames
+@role_required('administrativo', 'paciente')
+def agendas_disponiveis_exame(request):
+    tipo = request.GET.get('tipo')
+    if not tipo:
+        return JsonResponse({'agendas': []})
+
+    agendas = AgendaExame.objects.filter(tipo_exame=tipo, status_manual='livre').order_by('data', 'horario_inicio')
+    agendas = [a for a in agendas if a.esta_disponivel]
+
+    agendas_data = [
+        {
+            'id': a.id,
+            'descricao': f"{a.data.strftime('%d/%m/%Y')} - {a.horario_inicio.strftime('%H:%M')} ({a.sala})"
+        }
+        for a in agendas
+    ]
+
+    return JsonResponse({'agendas': agendas_data})

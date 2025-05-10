@@ -1,14 +1,17 @@
 {% extends 'base.html' %}
-{% block title %}Excluir Horário{% endblock %}
+
+{% block title %}Excluir Agenda{% endblock %}
+
 {% block content %}
-<div class="card p-4">
-    <h4>Confirmar Exclusão</h4>
-    <p>Tem certeza que deseja excluir o horário de <strong>{{ agenda }}</strong>?</p>
+<div class="container mt-4">
+    <h2 class="mb-4 text-danger">Confirmação de Exclusão</h2>
+
+    <p>Tem certeza que deseja excluir o horário do dia <strong>{{ agenda.data }}</strong> das <strong>{{ agenda.horario_inicio }}</strong> às <strong>{{ agenda.horario_fim }}</strong>?</p>
 
     <form method="post">
         {% csrf_token %}
-        <a href="{% url 'lista_agenda' %}" class="btn btn-secondary">Cancelar</a>
-        <button type="submit" class="btn btn-danger">Excluir</button>
+        <button type="submit" class="btn btn-danger">Confirmar Exclusão</button>
+        <a href="{% url 'dashboard_administrativo' %}" class="btn btn-secondary">Cancelar</a>
     </form>
 </div>
 {% endblock %}
