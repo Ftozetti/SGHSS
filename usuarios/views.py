@@ -5,12 +5,13 @@ from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .models import (Sala, Consulta, Usuario, Prontuario, Exame, Teleconsulta, Laudo, 
-    Receita, Atestado, AgendaConsulta, AgendaExame, AgendaTeleconsulta
+    Receita, Atestado, AgendaConsulta, AgendaExame, AgendaTeleconsulta, ResultadoExame,
+    ImagemResultadoExame
 )
 from .forms import (SalaForm, ConsultaForm, CancelamentoConsultaForm, LaudoForm, 
                     ReceitaForm, AtestadoForm, ProntuarioForm, ObservacoesConsultaForm, 
                     SelecionarPacienteForm, ExameForm, AgendaExameForm, AgendaTeleconsultaForm, 
-                    AgendaConsultaForm, AgendaTeleconsulta, TeleconsultaForm    
+                    AgendaConsultaForm, AgendaTeleconsulta, TeleconsultaForm, ResultadoExameForm 
 )
 from .decorators import role_required
 from django import forms
@@ -723,27 +724,17 @@ def encerrar_atendimento(request, pk):
 
 #View para emissão de laudo em pdf
 @role_required('medico')
-def emitir_laudo(request, pk):
-    # Tenta buscar Consulta ou Teleconsulta
-    consulta = Consulta.objects.filter(id=pk).first()
-    teleconsulta = Teleconsulta.objects.filter(id=pk).first()
-
-    if not consulta and not teleconsulta:
-        return HttpResponse("Consulta não encontrada.", status=404)
-
-    instancia = consulta or teleconsulta
-    paciente = instancia.paciente
+def emitir_laudo_consulta(request, pk):
+    consulta = get_object_or_404(Consulta, pk=pk, medico=request.user)
+    paciente = consulta.paciente
 
     if request.method == 'POST':
         form = LaudoForm(request.POST)
         if form.is_valid():
             laudo = form.save(commit=False)
+            laudo.consulta = consulta
             laudo.medico = request.user
             laudo.paciente = paciente
-            if consulta:
-                laudo.consulta = consulta
-            else:
-                laudo.teleconsulta = teleconsulta
             laudo.save()
 
             html = render_to_string('consultas/laudo_pdf.html', {'laudo': laudo})
@@ -752,78 +743,58 @@ def emitir_laudo(request, pk):
             laudo.arquivo_pdf.save(f'laudo_{laudo.id}.pdf', ContentFile(resultado.getvalue()))
             laudo.save()
 
-            return redirect('detalhar_consulta' if consulta else 'detalhar_teleconsulta', pk=instancia.id)
+            return redirect('detalhar_consulta', pk=consulta.pk)
     else:
         form = LaudoForm()
 
-    return render(request, 'consultas/form_laudo.html', {
-        'instancia': instancia,  # nome neutro
-        'form': form,
-        'is_teleconsulta': bool(teleconsulta)
+    return render(request, 'consultas/form_laudo_consulta.html', {
+        'consulta': consulta,
+        'form': form
     })
 
 
 @role_required('medico')
-def emitir_atestado(request, pk):
-    consulta = Consulta.objects.filter(id=pk).first()
-    teleconsulta = Teleconsulta.objects.filter(id=pk).first()
-
-    if not consulta and not teleconsulta:
-        return HttpResponse("Consulta não encontrada.", status=404)
-
-    instancia = consulta or teleconsulta
-    paciente = instancia.paciente
+def emitir_laudo_teleconsulta(request, pk):
+    teleconsulta = get_object_or_404(Teleconsulta, pk=pk, medico=request.user)
+    paciente = teleconsulta.paciente
 
     if request.method == 'POST':
-        form = AtestadoForm(request.POST)
+        form = LaudoForm(request.POST)
         if form.is_valid():
-            atestado = form.save(commit=False)
-            atestado.medico = request.user
-            atestado.paciente = paciente
-            if consulta:
-                atestado.consulta = consulta
-            else:
-                atestado.teleconsulta = teleconsulta
-            atestado.save()
+            laudo = form.save(commit=False)
+            laudo.teleconsulta = teleconsulta
+            laudo.medico = request.user
+            laudo.paciente = paciente
+            laudo.save()
 
-            html = render_to_string('consultas/atestado_pdf.html', {'atestado': atestado})
+            html = render_to_string('consultas/laudo_pdf.html', {'laudo': laudo})
             resultado = io.BytesIO()
             pisa.CreatePDF(io.BytesIO(html.encode('utf-8')), dest=resultado)
-            atestado.arquivo_pdf.save(f'atestado_{atestado.id}.pdf', ContentFile(resultado.getvalue()))
-            atestado.save()
+            laudo.arquivo_pdf.save(f'laudo_{laudo.id}.pdf', ContentFile(resultado.getvalue()))
+            laudo.save()
 
-            return redirect('detalhar_consulta' if consulta else 'detalhar_teleconsulta', pk=instancia.id)
+            return redirect('detalhar_teleconsulta', pk=teleconsulta.pk)
     else:
-        form = AtestadoForm()
+        form = LaudoForm()
 
-    return render(request, 'consultas/form_atestado.html', {
-        'instancia': instancia,
-        'form': form,
-        'is_teleconsulta': bool(teleconsulta)
+    return render(request, 'consultas/form_laudo_teleconsulta.html', {
+        'teleconsulta': teleconsulta,
+        'form': form
     })
 
-
+#View para emissão de receitas
 @role_required('medico')
-def emitir_receita(request, pk):
-    consulta = Consulta.objects.filter(id=pk).first()
-    teleconsulta = Teleconsulta.objects.filter(id=pk).first()
-
-    if not consulta and not teleconsulta:
-        return HttpResponse("Consulta não encontrada.", status=404)
-
-    instancia = consulta or teleconsulta
-    paciente = instancia.paciente
+def emitir_receita_consulta(request, pk):
+    consulta = get_object_or_404(Consulta, pk=pk, medico=request.user)
+    paciente = consulta.paciente
 
     if request.method == 'POST':
         form = ReceitaForm(request.POST)
         if form.is_valid():
             receita = form.save(commit=False)
+            receita.consulta = consulta
             receita.medico = request.user
             receita.paciente = paciente
-            if consulta:
-                receita.consulta = consulta
-            else:
-                receita.teleconsulta = teleconsulta
             receita.save()
 
             html = render_to_string('consultas/receita_pdf.html', {'receita': receita})
@@ -832,14 +803,103 @@ def emitir_receita(request, pk):
             receita.arquivo_pdf.save(f'receita_{receita.id}.pdf', ContentFile(resultado.getvalue()))
             receita.save()
 
-            return redirect('detalhar_consulta' if consulta else 'detalhar_teleconsulta', pk=instancia.id)
+            return redirect('detalhar_consulta', pk=consulta.pk)
     else:
         form = ReceitaForm()
 
-    return render(request, 'consultas/form_receita.html', {
-        'instancia': instancia,
-        'form': form,
-        'is_teleconsulta': bool(teleconsulta)
+    return render(request, 'consultas/form_receita_consulta.html', {
+        'consulta': consulta,
+        'form': form
+    })
+
+
+@role_required('medico')
+def emitir_receita_teleconsulta(request, pk):
+    teleconsulta = get_object_or_404(Teleconsulta, pk=pk, medico=request.user)
+    paciente = teleconsulta.paciente
+
+    if request.method == 'POST':
+        form = ReceitaForm(request.POST)
+        if form.is_valid():
+            receita = form.save(commit=False)
+            receita.teleconsulta = teleconsulta
+            receita.medico = request.user
+            receita.paciente = paciente
+            receita.save()
+
+            html = render_to_string('consultas/receita_pdf.html', {'receita': receita})
+            resultado = io.BytesIO()
+            pisa.CreatePDF(io.BytesIO(html.encode('utf-8')), dest=resultado)
+            receita.arquivo_pdf.save(f'receita_{receita.id}.pdf', ContentFile(resultado.getvalue()))
+            receita.save()
+
+            return redirect('detalhar_teleconsulta', pk=teleconsulta.pk)
+    else:
+        form = ReceitaForm()
+
+    return render(request, 'consultas/form_receita_teleconsulta.html', {
+        'teleconsulta': teleconsulta,
+        'form': form
+    })
+
+#View para emissão de atestados
+@role_required('medico')
+def emitir_atestado_consulta(request, pk):
+    consulta = get_object_or_404(Consulta, pk=pk, medico=request.user)
+    paciente = consulta.paciente
+
+    if request.method == 'POST':
+        form = AtestadoForm(request.POST)
+        if form.is_valid():
+            atestado = form.save(commit=False)
+            atestado.consulta = consulta
+            atestado.medico = request.user
+            atestado.paciente = paciente
+            atestado.save()
+
+            html = render_to_string('consultas/atestado_pdf.html', {'atestado': atestado})
+            resultado = io.BytesIO()
+            pisa.CreatePDF(io.BytesIO(html.encode('utf-8')), dest=resultado)
+            atestado.arquivo_pdf.save(f'atestado_{atestado.id}.pdf', ContentFile(resultado.getvalue()))
+            atestado.save()
+
+            return redirect('detalhar_consulta', pk=consulta.pk)
+    else:
+        form = AtestadoForm()
+
+    return render(request, 'consultas/form_atestado_consulta.html', {
+        'consulta': consulta,
+        'form': form
+    })
+
+
+@role_required('medico')
+def emitir_atestado_teleconsulta(request, pk):
+    teleconsulta = get_object_or_404(Teleconsulta, pk=pk, medico=request.user)
+    paciente = teleconsulta.paciente
+
+    if request.method == 'POST':
+        form = AtestadoForm(request.POST)
+        if form.is_valid():
+            atestado = form.save(commit=False)
+            atestado.teleconsulta = teleconsulta
+            atestado.medico = request.user
+            atestado.paciente = paciente
+            atestado.save()
+
+            html = render_to_string('consultas/atestado_pdf.html', {'atestado': atestado})
+            resultado = io.BytesIO()
+            pisa.CreatePDF(io.BytesIO(html.encode('utf-8')), dest=resultado)
+            atestado.arquivo_pdf.save(f'atestado_{atestado.id}.pdf', ContentFile(resultado.getvalue()))
+            atestado.save()
+
+            return redirect('detalhar_teleconsulta', pk=teleconsulta.pk)
+    else:
+        form = AtestadoForm()
+
+    return render(request, 'consultas/form_atestado_teleconsulta.html', {
+        'teleconsulta': teleconsulta,
+        'form': form
     })
 
 #View de visualização de laudo
@@ -1028,10 +1088,129 @@ def detalhar_teleconsulta(request, pk):
     else:
         form = ObservacoesConsultaForm(instance=teleconsulta)
 
-    return render(request, 'consultas/detalhar_consulta.html', {
-        'consulta': teleconsulta,
+    return render(request, 'teleconsultas/detalhar_teleconsulta.html', {
+        'teleconsulta': teleconsulta,
         'form_observacoes': form,
-        'is_teleconsulta': True 
     })
 
+#view para detalhar informações do exame para tratamento pelo medico
+@role_required('medico')
+def detalhar_exame(request, pk):
+    exame = get_object_or_404(Exame, pk=pk, medico=request.user)
 
+    if request.method == 'POST':
+        form = ObservacoesConsultaForm(request.POST, instance=exame)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Observações atualizadas com sucesso.')
+            return redirect('detalhar_exame', pk=pk)
+    else:
+        form = ObservacoesConsultaForm(instance=exame)
+
+    return render(request, 'exames/detalhar_exame.html', {
+        'exame': exame,
+        'form_observacoes': form
+    })
+
+#view para emissão de documentos de exame
+@role_required('medico')
+def emitir_resultado_exame(request, pk):
+    exame = get_object_or_404(Exame, pk=pk, medico=request.user)
+    paciente = exame.paciente
+
+    if request.method == 'POST':
+        form = ResultadoExameForm(request.POST, request.FILES)
+        if form.is_valid():
+            resultado = form.save(commit=False)
+            resultado.exame = exame
+            resultado.medico = request.user
+            resultado.paciente = paciente
+            resultado.save()
+
+            html = render_to_string('exames/resultado_exame_pdf.html', {'resultado': resultado})
+            resultado_io = io.BytesIO()
+            pisa.CreatePDF(io.BytesIO(html.encode('utf-8')), dest=resultado_io)
+            resultado.arquivo_pdf.save(f'resultado_exame_{resultado.id}.pdf', ContentFile(resultado_io.getvalue()))
+            resultado.save()
+
+            return redirect('detalhar_exame', pk=exame.pk)
+    else:
+        form = ResultadoExameForm()
+
+    return render(request, 'exames/form_resultado_exame.html', {
+        'exame': exame,
+        'form': form
+    })
+
+#view para visualizar o resultado exame
+@role_required('medico', 'paciente', 'administrativo')
+def visualizar_resultado_exame(request, resultado_id):
+    resultado = get_object_or_404(ResultadoExame, id=resultado_id)
+
+    if request.user != resultado.medico and request.user != resultado.paciente and request.user.role != 'administrativo':
+        return HttpResponseForbidden("Você não tem permissão para acessar este resultado.")
+
+    if resultado.arquivo_pdf:
+        return FileResponse(resultado.arquivo_pdf.open('rb'), content_type='application/pdf')
+
+    return HttpResponse("Arquivo não encontrado.", status=404)
+
+#view para cancelar o atendimento
+@role_required('medico')
+def cancelar_atendimento_exame(request, pk):
+    exame = get_object_or_404(Exame, pk=pk, medico=request.user)
+
+    if request.method == 'POST' and exame.status == 'em_andamento':
+        exame.status = 'agendada'
+        exame.save()
+        messages.success(request, 'Atendimento cancelado. Exame voltou ao status "agendado".')
+
+    return redirect('lista_exames')
+
+#view para finalizar o atendimento
+@role_required('medico')
+def encerrar_atendimento_exame(request, pk):
+    exame = get_object_or_404(Exame, pk=pk, medico=request.user)
+
+    if request.method == 'POST' and exame.status == 'em_andamento':
+        exame.status = 'finalizado'
+        exame.save()
+        messages.success(request, 'Exame finalizado com sucesso.')
+
+    return redirect('lista_exames')
+
+#view para listar exames
+@role_required('medico')
+def lista_exames(request):
+    exames = Exame.objects.all().order_by('-agenda__data', '-agenda__horario_inicio')
+    return render(request, 'exames/lista_exames.html', {
+        'exames': exames,
+        'medico_logado': request.user
+    })
+
+#view para iniciar o atendimento
+@role_required('medico')
+def iniciar_atendimento_exame(request, pk):
+    exame = get_object_or_404(Exame, pk=pk)
+
+    if exame.status != 'agendada':
+        messages.error(request, 'Este exame não pode ser iniciado.')
+        return redirect('lista_exames')
+
+    # Se já tem médico atribuído diferente do atual
+    if exame.medico and exame.medico != request.user:
+        if request.method == 'POST' and 'confirmar' in request.POST:
+            exame.medico = request.user
+            exame.status = 'em_andamento'
+            exame.save()
+            return redirect('detalhar_exame', pk=exame.pk)
+        return render(request, 'exames/confirmar_substituicao.html', {
+            'exame': exame,
+            'medico_atual': exame.medico
+        })
+
+    # Se não tem médico ou já é o médico certo
+    exame.medico = request.user
+    exame.status = 'em_andamento'
+    exame.save()
+    return redirect('detalhar_exame', pk=exame.pk)

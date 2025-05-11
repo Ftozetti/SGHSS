@@ -1,6 +1,6 @@
 from django import forms
 from .models import (Sala, AgendaConsulta, Consulta, Laudo, Receita, Atestado, Prontuario, 
-                     Usuario, AgendaExame, AgendaTeleconsulta, Exame, Teleconsulta
+                     Usuario, AgendaExame, AgendaTeleconsulta, Exame, Teleconsulta, ResultadoExame
 )
 from django.core.exceptions import ValidationError
 from django.utils import timezone
@@ -317,4 +317,15 @@ class SelecionarPacienteForm(forms.Form):
         label="Selecione um paciente",
         widget=forms.Select(attrs={'class': 'form-control'})
     )
+
+#forms para a emissão de laudo de exames
+class ResultadoExameForm(forms.ModelForm):
+    class Meta:
+        model = ResultadoExame
+        fields = ['conteudo', 'imagem']
+        widgets = {
+            'conteudo': forms.Textarea(attrs={'rows': 6}),
+        }
+
+
 

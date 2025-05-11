@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
 {% block content %}
 
-<h2>Consulta com {{ consulta.paciente.get_full_name }} – {{ consulta.data }} {{ consulta.horario_inicio }}</h2>
+<h2>Teleconsulta com {{ teleconsulta.paciente.get_full_name }} – {{ teleconsulta.data }} {{ teleconsulta.horario_inicio }}</h2>
 
-{% if form_observacoes and consulta.status != 'finalizada' %}
+{% if form_observacoes and teleconsulta.status != 'finalizada' %}
 <form method="post">
     {% csrf_token %}
     <div class="mb-3">
@@ -19,10 +19,10 @@
 {% else %}
 <hr>
 <h4>Observações ao Paciente</h4>
-<p>{{ consulta.observacoes_visiveis|default:"Nenhuma observação visível." }}</p>
+<p>{{ teleconsulta.observacoes_visiveis|default:"Nenhuma observação visível." }}</p>
 
 <h4>Observações Internas</h4>
-<p>{{ consulta.observacoes_internas|default:"Nenhuma anotação interna." }}</p>
+<p>{{ teleconsulta.observacoes_internas|default:"Nenhuma anotação interna." }}</p>
 {% endif %}
 
 <br>
@@ -32,20 +32,20 @@
 
 <hr>
 
-{% if consulta.status != 'finalizada' %}
-  <a href="{% url 'emitir_laudo_consulta' consulta.id %}" class="btn btn-outline-primary">📝 Emitir Laudo</a>
-  <a href="{% url 'emitir_atestado_consulta' consulta.id %}" class="btn btn-outline-secondary">📄 Emitir Atestado</a>
-  <a href="{% url 'emitir_receita_consulta' consulta.id %}" class="btn btn-outline-success">💊 Emitir Receita</a>
+{% if teleconsulta.status != 'finalizada' %}
+  <a href="{% url 'emitir_laudo_teleconsulta' teleconsulta.id %}" class="btn btn-outline-primary">📝 Emitir Laudo</a>
+  <a href="{% url 'emitir_atestado_teleconsulta' teleconsulta.id %}" class="btn btn-outline-secondary">📄 Emitir Atestado</a>
+  <a href="{% url 'emitir_receita_teleconsulta' teleconsulta.id %}" class="btn btn-outline-success">💊 Emitir Receita</a>
 {% endif %}
-<a href="{% url 'visualizar_prontuario' consulta.paciente.id %}" class="btn btn-outline-info">📚 Prontuário do Paciente</a>
+<a href="{% url 'visualizar_prontuario' teleconsulta.paciente.id %}" class="btn btn-outline-info">📚 Prontuário do Paciente</a>
 
 <hr>
 <h3>Documentos Emitidos</h3>
 
-{% if consulta.laudos.all %}
+{% if teleconsulta.laudos.all %}
   <h4>Laudos</h4>
   <ul>
-    {% for laudo in consulta.laudos.all %}
+    {% for laudo in teleconsulta.laudos.all %}
       <li>
         Laudo de {{ laudo.criado_em|date:"d/m/Y H:i" }} —
         <a href="{% url 'visualizar_laudo' laudo.id %}" target="_blank">Download PDF</a>
@@ -56,10 +56,10 @@
   <p>Nenhum laudo emitido.</p>
 {% endif %}
 
-{% if consulta.receitas.all %}
+{% if teleconsulta.receitas.all %}
   <h4>Receitas</h4>
   <ul>
-    {% for receita in consulta.receitas.all %}
+    {% for receita in teleconsulta.receitas.all %}
       <li>
         Receita de {{ receita.criado_em|date:"d/m/Y H:i" }} —
         <a href="{% url 'visualizar_receita' receita.id %}" target="_blank">Download PDF</a>
@@ -70,10 +70,10 @@
   <p>Nenhuma receita emitida.</p>
 {% endif %}
 
-{% if consulta.atestados.all %}
+{% if teleconsulta.atestados.all %}
   <h4>Atestados</h4>
   <ul>
-    {% for atestado in consulta.atestados.all %}
+    {% for atestado in teleconsulta.atestados.all %}
       <li>
         Atestado de {{ atestado.criado_em|date:"d/m/Y H:i" }} —
         <a href="{% url 'visualizar_atestado' atestado.id %}" target="_blank">Download PDF</a>
@@ -84,17 +84,16 @@
   <p>Nenhum atestado emitido.</p>
 {% endif %}
 
-{% if consulta.status == 'em_andamento' and request.user.role == 'medico' %}
-  <form method="post" action="{% url 'cancelar_atendimento' consulta.id %}" style="display:inline;">
+{% if teleconsulta.status == 'em_andamento' and request.user.role == 'medico' %}
+  <form method="post" action="{% url 'cancelar_atendimento_teleconsulta' teleconsulta.id %}" style="display:inline;">
     {% csrf_token %}
     <button type="submit" class="btn btn-warning">↩️ Cancelar Atendimento</button>
   </form>
 
-  <form method="post" action="{% url 'encerrar_atendimento' consulta.id %}" style="display:inline;">
+  <form method="post" action="{% url 'encerrar_atendimento_teleconsulta' teleconsulta.id %}" style="display:inline;">
     {% csrf_token %}
     <button type="submit" class="btn btn-danger">✅ Encerrar Consulta</button>
   </form>
 {% endif %}
 
 {% endblock %}
-

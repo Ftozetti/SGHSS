@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<h2>Exame de {{ exame.tipo|capfirst }} – {{ exame.paciente.get_full_name }} em {{ exame.data }} {{ exame.horario_inicio }}</h2>
+
+{% if form_observacoes and exame.status != 'finalizado' %}
+<form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label for="{{ form_observacoes.observacoes_visiveis.id_for_label }}">Observações ao Paciente</label>
+        {{ form_observacoes.observacoes_visiveis }}
+    </div>
+    <div class="mb-3">
+        <label for="{{ form_observacoes.observacoes_internas.id_for_label }}">Observações Internas</label>
+        {{ form_observacoes.observacoes_internas }}
+    </div>
+    <button type="submit" class="btn btn-primary">Salvar Observações</button>
+</form>
+{% else %}
+<hr>
+<h4>Observações ao Paciente</h4>
+<p>{{ exame.observacoes_visiveis|default:"Nenhuma observação visível." }}</p>
+
+<h4>Observações Internas</h4>
+<p>{{ exame.observacoes_internas|default:"Nenhuma anotação interna." }}</p>
+{% endif %}
+
+<br>
+<a href="{% url 'redirecionar_dashboard' %}" class="btn btn-secondary">🏠 Retornar à Home</a>
+
+<hr>
+
+{% if exame.status != 'finalizado' %}
+  <a href="{% url 'emitir_resultado_exame' exame.id %}" class="btn btn-outline-primary">📝 Emitir Laudo</a>
+{% endif %}
+
+<a href="{% url 'visualizar_prontuario' exame.paciente.id %}" class="btn btn-outline-info">📚 Prontuário do Paciente</a>
+
+<hr>
+<h3>Laudos Emitidos</h3>
+
+{% if exame.resultados.all %}
+  <ul>
+    {% for resultado in exame.resultados.all %}
+      <li>
+        Resultado de {{ resultado.criado_em|date:"d/m/Y H:i" }} —
+        <a href="{% url 'visualizar_resultado_exame' resultado.id %}" target="_blank">Download PDF</a>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>Nenhum resultado emitido.</p>
+{% endif %}
+
+{% if exame.status == 'em_andamento' and request.user.role == 'medico' %}
+  <form method="post" action="{% url 'cancelar_atendimento_exame' exame.id %}" style="display:inline;">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-warning">↩️ Cancelar Atendimento</button>
+  </form>
+
+  <form method="post" action="{% url 'encerrar_atendimento_exame' exame.id %}" style="display:inline;">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">✅ Encerrar Exame</button>
+  </form>
+{% endif %}
+
+{% endblock %}

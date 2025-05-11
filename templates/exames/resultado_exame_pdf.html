@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: DejaVu Sans, sans-serif;
+            font-size: 12px;
+            margin: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        .bloco {
+            margin-bottom: 20px;
+        }
+
+        .imagem {
+            margin-top: 10px;
+            max-width: 100%;
+            max-height: 300px;
+        }
+
+        .footer {
+            position: fixed;
+            bottom: 10px;
+            text-align: center;
+            font-size: 10px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Resultado de Exame</h1>
+
+    <div class="bloco">
+        <strong>Paciente:</strong> {{ resultado.paciente.get_full_name }}<br>
+        <strong>Exame:</strong> {{ resultado.exame.tipo|capfirst }}<br>
+        <strong>Data:</strong> {{ resultado.criado_em|date:"d/m/Y H:i" }}<br>
+        <strong>Médico Responsável:</strong> Dr(a). {{ resultado.medico.get_full_name }}
+    </div>
+
+    <div class="bloco">
+        <strong>Conteúdo do Resultado:</strong><br>
+        <p>{{ resultado.conteudo|linebreaksbr }}</p>
+    </div>
+
+    {% if resultado.imagem %}
+        <div class="bloco">
+        <strong>Imagem do Exame:</strong><br>
+        <img src="{{ resultado.imagem.path }}" class="imagem">
+        </div>
+    {% endif %}
+
+    <div class="footer">
+        Documento gerado automaticamente - SGHSS
+    </div>
+
+</body>
+</html>

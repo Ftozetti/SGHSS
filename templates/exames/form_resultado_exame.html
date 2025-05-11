@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<h2>Emitir Resultado de Exame – {{ exame.tipo|capfirst }} de {{ exame.paciente.get_full_name }}</h2>
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label for="id_conteudo">Conteúdo do Resultado</label>
+        {{ form.conteudo }}
+    </div>
+
+    <div class="mb-3">
+        <label for="id_imagens">Imagem do Exame (máx. 2MB cada)</label>
+        {{ form.imagem }}
+    </div>
+
+    <button type="submit" class="btn btn-primary">Salvar e Gerar PDF</button>
+    <a href="{% url 'detalhar_exame' exame.id %}" class="btn btn-secondary">Cancelar</a>
+</form>
+
+{% endblock %}

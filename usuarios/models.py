@@ -374,3 +374,17 @@ class Prontuario(models.Model):
 
     def __str__(self):
         return f"Prontuário de {self.paciente.get_full_name()}"
+    
+#model para apresentação de laudos de resultados de exame
+class ResultadoExame(models.Model):
+    conteudo = models.TextField()
+    medico = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='resultados_exames')
+    paciente = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='resultados_exames_paciente')
+    exame = models.ForeignKey('Exame', on_delete=models.CASCADE, related_name='resultados')
+    imagem = models.ImageField(upload_to='resultados_exames_imagens/', null=True, blank=True)  
+    criado_em = models.DateTimeField(auto_now_add=True)
+    arquivo_pdf = models.FileField(upload_to='documentos/resultados_exames/', null=True, blank=True)
+
+class ImagemResultadoExame(models.Model):
+    resultado = models.ForeignKey(ResultadoExame, on_delete=models.CASCADE, related_name='imagens')
+    imagem = models.ImageField(upload_to='resultados_exames_imagens/')

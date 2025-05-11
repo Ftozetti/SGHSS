@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<h3>Substituir Médico do Exame</h3>
+<p>Este exame já está atribuído ao médico <strong>{{ medico_atual.get_full_name }}</strong>.</p>
+<p>Deseja assumir este atendimento como executor?</p>
+
+<form method="post">
+  {% csrf_token %}
+  <button type="submit" name="confirmar" class="btn btn-danger">Sim, assumir exame</button>
+  <a href="{% url 'lista_exames' %}" class="btn btn-secondary">Cancelar</a>
+</form>
+
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Exames para Avaliação</h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Paciente</th>
+            <th>Tipo</th>
+            <th>Data</th>
+            <th>Hora</th>
+            <th>Status</th>
+            <th>Médico</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for exame in exames %}
+        <tr>
+            <td>{{ exame.paciente.get_full_name }}</td>
+            <td>{{ exame.tipo|capfirst }}</td>
+            <td>{{ exame.data }}</td>
+            <td>{{ exame.horario_inicio }}</td>
+            <td>{{ exame.status }}</td>
+            <td>{{ exame.medico.get_full_name|default:"—" }}</td>
+            <td>
+            {% if exame.status == 'cancelada' %}
+                <span class="text-muted">—</span>
+
+            {% elif exame.status == 'finalizada' %}
+                <a href="{% url 'detalhar_exame' exame.id %}" class="btn btn-sm btn-secondary">Consultar</a>
+
+            {% elif exame.status == 'em_andamento' %}
+                {% if exame.medico == medico_logado %}
+                    <a href="{% url 'detalhar_exame' exame.id %}" class="btn btn-sm btn-primary">Detalhar</a>
+                {% else %}
+                    <button class="btn btn-sm btn-outline-dark" disabled>Em atendimento por {{ exame.medico.get_full_name }}</button>
+                {% endif %}
+
+            {% elif exame.status == 'agendada' %}
+                <form method="post" action="{% url 'iniciar_atendimento_exame' exame.id %}" style="display:inline;">
+                {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-success">Iniciar</button>
+                </form>
+            {% endif %}
+            </td>
+
+        </tr>
+    {% empty %}
+        <tr>
+            <td colspan="7">Nenhum exame encontrado.</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

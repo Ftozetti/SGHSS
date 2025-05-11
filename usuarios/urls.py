@@ -49,9 +49,9 @@ urlpatterns = [
     path('consultas/<int:pk>/detalhar/', views.detalhar_consulta, name='detalhar_consulta'),
     path('consultas/<int:pk>/encerrar/', views.encerrar_atendimento, name='encerrar_atendimento'),
     path('consultas/<int:pk>/cancelar-atendimento/', views.cancelar_atendimento, name='cancelar_atendimento'),
-    path('consultas/<int:pk>/emitir-laudo/', views.emitir_laudo, name='emitir_laudo'),
-    path('consultas/<int:pk>/emitir-atestado/', views.emitir_atestado, name='emitir_atestado'),
-    path('consultas/<int:pk>/emitir-receita/', views.emitir_receita, name='emitir_receita'),
+    path('consultas/<int:pk>/emitir-laudo/', views.emitir_laudo_consulta, name='emitir_laudo_consulta'),
+    path('consultas/<int:pk>/emitir-atestado/', views.emitir_atestado_consulta, name='emitir_atestado_consulta'),
+    path('consultas/<int:pk>/emitir-receita/', views.emitir_receita_consulta, name='emitir_receita_consulta'),
     path('consultas/usuario/', views.consultas_usuario, name='consultas_usuario'),
     path('consultas/usuario/<int:pk>/detalhar/', views.detalhar_consulta_usuario, name='detalhar_consulta_usuario'),
     path('consultas/cancelar/<int:consulta_id>/', views.cancelar_consulta, name='cancelar_consulta'),
@@ -61,22 +61,30 @@ urlpatterns = [
     path('exames/usuario/', views.exames_usuario, name='exames_usuario'),
     path('ajax/agendas-disponiveis-exame/', views.agendas_disponiveis_exame, name='ajax_agendas_exame'),
     path('exames/<int:exame_id>/cancelar/', views.cancelar_exame, name='cancelar_exame'),
+    path('exames/<int:pk>/emitir-resultado/', views.emitir_resultado_exame, name='emitir_resultado_exame'),
+    path('exames/<int:pk>/detalhar/', views.detalhar_exame, name='detalhar_exame'),
+    path('exames/<int:pk>/cancelar-atendimento/', views.cancelar_atendimento_exame, name='cancelar_atendimento_exame'),
+    path('exames/<int:pk>/encerrar/', views.encerrar_atendimento_exame, name='encerrar_atendimento_exame'),
+    path('exames/medico/', views.lista_exames, name='lista_exames'),
+    path('documentos/resultado-exame/<int:resultado_id>/', views.visualizar_resultado_exame, name='visualizar_resultado_exame'),
+    path('exames/<int:pk>/iniciar/', views.iniciar_atendimento_exame, name='iniciar_atendimento_exame'),
+
+
+
 
     # Teleconsultas
     path('teleconsultas/agendar/', views.agendar_teleconsulta, name='agendar_teleconsulta'),
     path('teleconsultas/usuario/', views.teleconsultas_usuario, name='teleconsultas_usuario'),
     path('teleconsultas/<int:teleconsulta_id>/cancelar/', views.cancelar_teleconsulta, name='cancelar_teleconsulta'),
-    path('teleconsultas/<int:pk>/emitir-laudo/', views.emitir_laudo, name='emitir_laudo'),
-    path('teleconsultas/<int:pk>/emitir-atestado/', views.emitir_atestado, name='emitir_atestado'),
-    path('teleconsultas/<int:pk>/emitir-receita/', views.emitir_receita, name='emitir_receita'),
+    path('teleconsultas/<int:pk>/emitir-laudo/', views.emitir_laudo_teleconsulta, name='emitir_laudo_teleconsulta'),
+    path('teleconsultas/<int:pk>/emitir-atestado/', views.emitir_atestado_teleconsulta, name='emitir_atestado_teleconsulta'),
+    path('teleconsultas/<int:pk>/emitir-receita/', views.emitir_receita_teleconsulta, name='emitir_receita_teleconsulta'),
     path('teleconsultas/medico/', views.lista_teleconsultas, name='lista_teleconsultas'),
     path('teleconsultas/<int:pk>/detalhar/', views.detalhar_teleconsulta, name='detalhar_teleconsulta'),
     path('teleconsultas/<int:pk>/iniciar/', views.iniciar_teleconsulta, name='iniciar_teleconsulta'),
     path('teleconsultas/<int:pk>/cancelar-atendimento/', views.cancelar_atendimento_teleconsulta, name='cancelar_atendimento_teleconsulta'),
     path('teleconsultas/<int:pk>/encerrar/', views.encerrar_atendimento_teleconsulta, name='encerrar_atendimento_teleconsulta'),
-
-
-    
+ 
 
     # Prontuário
     path('prontuario/<int:paciente_id>/', views.visualizar_prontuario, name='visualizar_prontuario'),

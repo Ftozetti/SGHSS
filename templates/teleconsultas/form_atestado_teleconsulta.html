@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Emitir Atestado – Teleconsulta com {{ teleconsulta.paciente.get_full_name }}</h2>
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit" class="btn btn-secondary">Salvar e Gerar PDF</button>
+  <a href="{% url 'detalhar_teleconsulta' teleconsulta.id %}" class="btn btn-light">Cancelar</a>
+</form>
+{% endblock %}
