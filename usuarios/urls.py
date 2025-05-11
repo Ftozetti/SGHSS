@@ -97,4 +97,24 @@ urlpatterns = [
     path('documentos/laudo/<int:laudo_id>/', views.visualizar_laudo, name='visualizar_laudo'),
     path('documentos/receita/<int:receita_id>/', views.visualizar_receita, name='visualizar_receita'),
     path('documentos/atestado/<int:atestado_id>/', views.visualizar_atestado, name='visualizar_atestado'),
+
+    #Financeiro
+    path('financeiro/receitas/', views.relatorio_receitas, name='relatorio_receitas'),
+    path('financeiro/pagamentos/materiais/', views.relatorio_pagamentos_materiais, name='relatorio_pagamentos_materiais'),
+
+
+    #materiais
+    path('estoque/', views.visualizar_estoque, name='visualizar_estoque'),
+    path('materiais/novo/', views.criar_pedido_material, name='criar_pedido_material'),
+    path('materiais/financeiro/<int:pedido_id>/aprovar/', views.aprovar_pedido_material, name='aprovar_pedido_material'),
+    path('materiais/financeiro/', views.listar_pedidos_financeiro, name='listar_pedidos_financeiro'),
+    path('materiais/', views.listar_pedidos_administrativo, name='listar_pedidos_administrativo'),
+    path('materiais/<int:pedido_id>/confirmar-entrega/', views.confirmar_entrega_pedido, name='confirmar_entrega_pedido'),
+
+
+
+
+
+
+
 ]

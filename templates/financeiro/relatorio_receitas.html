@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Relatório de Receitas</h2>
+    <table class="table table-bordered mt-3">
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Tipo de Procedimento</th>
+                <th>Valor</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in receitas %}
+                <tr>
+                    <td>{{ r.data|date:"d/m/Y H:i" }}</td>
+                    <td>{{ r.get_procedimento_display }}</td>
+                    <td>R$ {{ r.valor }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="3" class="text-center">Nenhuma receita registrada.</td></tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <th colspan="2" class="text-start">Total:</th>
+                <th>R$ {{ total|floatformat:2 }}</th>
+            </tr>
+        </tfoot>
+    </table>
+    <a href="{% url 'redirecionar_dashboard' %}" class="btn btn-secondary">🏠 Retornar ao Dashboard</a>
+</div>
+{% endblock %}

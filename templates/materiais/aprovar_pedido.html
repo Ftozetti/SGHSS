@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h2>Aprovar Pedido</h2>
+  <p><strong>Material:</strong> {{ pedido.material.nome }}</p>
+  <p><strong>Quantidade:</strong> {{ pedido.quantidade }}</p>
+  <p><strong>Valor Total:</strong> R$ {{ pedido.valor_total|floatformat:2 }}</p>
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-success">Aprovar Pedido</button>
+    <a href="{% url 'listar_pedidos_financeiro' %}" class="btn btn-secondary">Cancelar</a>
+  </form>
+</div>
+<br>
+<a href="{% url 'redirecionar_dashboard' %}" class="btn btn-secondary">🏠 Retornar ao Dashboard</a>
+{% endblock %}

@@ -388,3 +388,79 @@ class ResultadoExame(models.Model):
 class ImagemResultadoExame(models.Model):
     resultado = models.ForeignKey(ResultadoExame, on_delete=models.CASCADE, related_name='imagens')
     imagem = models.ImageField(upload_to='resultados_exames_imagens/')
+
+#classe para receber informações de receita financeira
+class ReceitaFinanceira(models.Model):
+    PROCEDIMENTO_CHOICES = [
+        ('consulta', 'Consulta Presencial'),
+        ('teleconsulta', 'Teleconsulta'),
+        ('exame', 'Exame'),
+    ]
+
+    procedimento = models.CharField(max_length=20, choices=PROCEDIMENTO_CHOICES)
+    valor = models.DecimalField(max_digits=8, decimal_places=2)
+    data = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.get_procedimento_display()} - R$ {self.valor:.2f} em {self.data.strftime('%d/%m/%Y')}"
+    
+#Criação da classe material
+class Material(models.Model):
+    nome = models.CharField(max_length=100, unique=True)
+    valor_unitario = models.DecimalField(max_digits=8, decimal_places=2)
+    fornecedor = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.nome
+    
+#Criação da classe estoque
+class Estoque(models.Model):
+    material = models.OneToOneField(Material, on_delete=models.CASCADE)
+    quantidade = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.material.nome} - {self.quantidade} un"
+
+#Criação do modelo para gerar pedidos de materiais
+class PedidoMaterial(models.Model):
+    STATUS_CHOICES = [
+        ('pendente', 'Pendente de aprovação'),
+        ('aprovado', 'Compra aprovada'),
+        ('entregue', 'Material entregue'),
+    ]
+
+    material = models.ForeignKey(Material, on_delete=models.CASCADE)
+    quantidade = models.PositiveIntegerField()
+    valor_total = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+
+    criado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='pedidos_materiais_criados'
+    )
+    data_pedido = models.DateTimeField(auto_now_add=True)
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pendente')
+    data_aprovacao = models.DateTimeField(null=True, blank=True)
+    aprovado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='pedidos_materiais_aprovados'
+    )
+
+    data_entrega = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.material.nome} - {self.quantidade} un - {self.get_status_display()}"
+
+#classe para armazenar informações dos pagamentos efetuados
+class Pagamento(models.Model):
+    descricao = models.CharField(max_length=255)
+    valor = models.DecimalField(max_digits=8, decimal_places=2)
+    data_pagamento = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.descricao} - R$ {self.valor:.2f}"

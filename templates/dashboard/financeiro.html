@@ -8,18 +8,20 @@
 <div class="row g-4">
   <div class="col-md-6">
     <div class="card p-3">
-      <h5 class="card-title">Relatórios Financeiros</h5>
-      <a href="#" class="btn btn-outline-light mt-2">Visualizar Entradas e Saídas</a>
-      <a href="#" class="btn btn-outline-light mt-2">Gerar Relatórios</a>
+      <h5 class="card-title">Receitas</h5>
+      <a href="{% url 'relatorio_receitas' %}" class="btn btn-outline-primary mt-2">Relatório de Receitas</a>
     </div>
   </div>
 
   <div class="col-md-6">
     <div class="card p-3">
-      <h5 class="card-title">Pedidos de Compra</h5>
-      <a href="#" class="btn btn-outline-light mt-2">Ver Pedidos Pendentes</a>
-      <a href="#" class="btn btn-outline-light mt-2">Confirmar Pagamentos</a>
+      <h5 class="card-title">Pagamentos</h5>
+      <a href="{% url 'relatorio_pagamentos_materiais' %}" class="btn btn-outline-success mt-2">Relatório de Pagamentos</a>
+      <a href="{% url 'listar_pedidos_financeiro' %}" class="btn btn-outline-info mt-2">Consultar / Aprovar Pedidos</a>
     </div>
+  </div>
+</div>
+
   </div>
 </div>
 {% endblock %}

@@ -1,6 +1,7 @@
 from django import forms
 from .models import (Sala, AgendaConsulta, Consulta, Laudo, Receita, Atestado, Prontuario, 
-                     Usuario, AgendaExame, AgendaTeleconsulta, Exame, Teleconsulta, ResultadoExame
+                     Usuario, AgendaExame, AgendaTeleconsulta, Exame, Teleconsulta, ResultadoExame,
+                     PedidoMaterial 
 )
 from django.core.exceptions import ValidationError
 from django.utils import timezone
@@ -326,6 +327,18 @@ class ResultadoExameForm(forms.ModelForm):
         widgets = {
             'conteudo': forms.Textarea(attrs={'rows': 6}),
         }
+
+#forms para pedido de material
+class PedidoMaterialForm(forms.ModelForm):
+    class Meta:
+        model = PedidoMaterial
+        fields = ['material', 'quantidade']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['material'].label = "Selecione o Material"
+        self.fields['quantidade'].label = "Quantidade Desejada"
+
 
 
 

@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h2>Pedidos de Materiais Pendentes</h2>
+
+  <table class="table table-striped mt-3">
+    <thead>
+      <tr>
+        <th>Material</th>
+        <th>Quantidade</th>
+        <th>Valor Total</th>
+        <th>Solicitado por</th>
+        <th>Data</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for pedido in pedidos %}
+        <tr>
+          <td>{{ pedido.material.nome }}</td>
+          <td>{{ pedido.quantidade }}</td>
+          <td>R$ {{ pedido.valor_total|floatformat:2 }}</td>
+          <td>{{ pedido.criado_por.get_full_name }}</td>
+          <td>{{ pedido.data_pedido|date:"d/m/Y H:i" }}</td>
+          <td>
+            <a href="{% url 'aprovar_pedido_material' pedido.id %}" class="btn btn-sm btn-success">Aprovar</a>
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="6" class="text-center">Nenhum pedido pendente.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<br>
+<a href="{% url 'redirecionar_dashboard' %}" class="btn btn-secondary">🏠 Retornar ao Dashboard</a>
+{% endblock %}

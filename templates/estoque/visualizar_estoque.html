@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h2>Estoque de Materiais</h2>
+  <table class="table table-striped mt-3">
+    <thead>
+      <tr>
+        <th>Material</th>
+        <th>Quantidade em Estoque</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in estoque %}
+        <tr>
+          <td>{{ item.material.nome }}</td>
+          <td>{{ item.quantidade }}</td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="2" class="text-center">Nenhum material em estoque.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <a href="{% url 'redirecionar_dashboard' %}" class="btn btn-secondary">🏠 Retornar ao Dashboard</a>
+</div>
+{% endblock %}

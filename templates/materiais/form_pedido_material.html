@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h2>Solicitar Material</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Criar Pedido</button>
+    <a href="{% url 'visualizar_estoque' %}" class="btn btn-secondary">Cancelar</a>
+  </form>
+</div>
+<br>
+<a href="{% url 'redirecionar_dashboard' %}" class="btn btn-secondary">🏠 Retornar ao Dashboard</a>
+{% endblock %}

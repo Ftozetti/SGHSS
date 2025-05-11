@@ -6,12 +6,13 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .models import (Sala, Consulta, Usuario, Prontuario, Exame, Teleconsulta, Laudo, 
     Receita, Atestado, AgendaConsulta, AgendaExame, AgendaTeleconsulta, ResultadoExame,
-    ImagemResultadoExame
+    ImagemResultadoExame, ReceitaFinanceira, Estoque, PedidoMaterial, Pagamento
 )
 from .forms import (SalaForm, ConsultaForm, CancelamentoConsultaForm, LaudoForm, 
                     ReceitaForm, AtestadoForm, ProntuarioForm, ObservacoesConsultaForm, 
                     SelecionarPacienteForm, ExameForm, AgendaExameForm, AgendaTeleconsultaForm, 
-                    AgendaConsultaForm, AgendaTeleconsulta, TeleconsultaForm, ResultadoExameForm 
+                    AgendaConsultaForm, AgendaTeleconsulta, TeleconsultaForm, ResultadoExameForm,
+                    PedidoMaterialForm
 )
 from .decorators import role_required
 from django import forms
@@ -20,6 +21,7 @@ from django.http import HttpResponse, FileResponse, HttpResponseForbidden, JsonR
 from xhtml2pdf import pisa
 import io
 from django.core.files.base import ContentFile
+from django.db import models
 
 
 
@@ -720,6 +722,11 @@ def encerrar_atendimento(request, pk):
     if request.method == 'POST' and consulta.status == 'em_andamento':
         consulta.status = 'finalizada'
         consulta.save()
+        ReceitaFinanceira.objects.create(
+            procedimento='consulta',
+            valor=consulta.valor
+        )
+
     return redirect('lista_consultas') 
 
 #View para emissão de laudo em pdf
@@ -777,7 +784,7 @@ def emitir_laudo_teleconsulta(request, pk):
     else:
         form = LaudoForm()
 
-    return render(request, 'consultas/form_laudo_teleconsulta.html', {
+    return render(request, 'teleconsultas/form_laudo_teleconsulta.html', {
         'teleconsulta': teleconsulta,
         'form': form
     })
@@ -837,7 +844,7 @@ def emitir_receita_teleconsulta(request, pk):
     else:
         form = ReceitaForm()
 
-    return render(request, 'consultas/form_receita_teleconsulta.html', {
+    return render(request, 'teleconsultas/form_receita_teleconsulta.html', {
         'teleconsulta': teleconsulta,
         'form': form
     })
@@ -897,7 +904,7 @@ def emitir_atestado_teleconsulta(request, pk):
     else:
         form = AtestadoForm()
 
-    return render(request, 'consultas/form_atestado_teleconsulta.html', {
+    return render(request, 'teleconsultas/form_atestado_teleconsulta.html', {
         'teleconsulta': teleconsulta,
         'form': form
     })
@@ -1073,6 +1080,10 @@ def encerrar_atendimento_teleconsulta(request, pk):
         tele.status = 'finalizada'
         tele.save()
         messages.success(request, 'Atendimento finalizado com sucesso.')
+        ReceitaFinanceira.objects.create(
+            procedimento='teleconsulta',
+            valor=tele.valor
+        )
     return redirect('lista_teleconsultas')
 
 @role_required('medico')
@@ -1176,6 +1187,11 @@ def encerrar_atendimento_exame(request, pk):
         exame.status = 'finalizada'
         exame.save()
         messages.success(request, 'Exame finalizado com sucesso.')
+        
+        ReceitaFinanceira.objects.create(
+            procedimento='exame',
+            valor=exame.valor
+)
 
     return redirect('lista_exames')
 
@@ -1247,4 +1263,104 @@ def detalhar_exame_usuario(request, pk):
         'exame': exame,
         'mostrar_obs_internas': mostrar_obs_internas,
     })
+
+#view para consulta de receitafinanceira
+@role_required('financeiro')
+def relatorio_receitas(request):
+    receitas = ReceitaFinanceira.objects.all().order_by('-data')
+    total = receitas.aggregate(total_valor=models.Sum('valor'))['total_valor'] or 0
+    return render(request, 'financeiro/relatorio_receitas.html', {
+        'receitas': receitas,
+        'total' : total
+        })
+
+#View para visualizar estoque
+@role_required('administrativo')
+def visualizar_estoque(request):
+    estoque = Estoque.objects.select_related('material').all()
+    return render(request, 'estoque/visualizar_estoque.html', {'estoque': estoque})
+
+#view para pedido de material
+@role_required('administrativo')
+def criar_pedido_material(request):
+    if request.method == 'POST':
+        form = PedidoMaterialForm(request.POST)
+        if form.is_valid():
+            pedido = form.save(commit=False)
+            pedido.criado_por = request.user
+            pedido.valor_total = pedido.material.valor_unitario * pedido.quantidade
+            pedido.save()
+            messages.success(request, "Pedido de material criado com sucesso.")
+            return redirect('visualizar_estoque')  # ou para a lista de pedidos, se desejar
+    else:
+        form = PedidoMaterialForm()
+
+    return render(request, 'materiais/form_pedido_material.html', {'form': form})
+
+#view para listar os pedidos pendentes de aprovação
+@role_required('financeiro')
+def listar_pedidos_financeiro(request):
+    pedidos = PedidoMaterial.objects.filter(status='pendente')
+    return render(request, 'materiais/listar_pedidos_financeiro.html', {'pedidos': pedidos})
+
+#view para aprovar o pedido do material
+@role_required('financeiro')
+def aprovar_pedido_material(request, pedido_id):
+    pedido = get_object_or_404(PedidoMaterial, pk=pedido_id, status='pendente')
+
+    if request.method == 'POST':
+        pedido.status = 'aprovado'
+        pedido.aprovado_por = request.user
+        pedido.data_aprovacao = timezone.now()
+        pedido.save()
+
+        Pagamento.objects.create(
+            descricao=f"Compra de {pedido.quantidade}x {pedido.material.nome}",
+            valor=pedido.valor_total
+        )
+
+        messages.success(request, 'Pedido aprovado e pagamento registrado.')
+        return redirect('listar_pedidos_financeiro')
+
+    return render(request, 'materiais/aprovar_pedido.html', {'pedido': pedido})
+
+#listar pedidos para o administrativo
+@role_required('administrativo')
+def listar_pedidos_administrativo(request):
+    pedidos = PedidoMaterial.objects.all().order_by('-data_pedido')
+    return render(request, 'materiais/listar_pedidos_administrativo.html', {'pedidos': pedidos})
+
+#view para confirmar o recebimento do material e o registro no estoque
+@role_required('administrativo')
+def confirmar_entrega_pedido(request, pedido_id):
+    pedido = get_object_or_404(PedidoMaterial, pk=pedido_id, status='aprovado')
+
+    if request.method == 'POST':
+        pedido.status = 'entregue'
+        pedido.data_entrega = timezone.now()
+        pedido.save()
+
+        estoque, criado = Estoque.objects.get_or_create(material=pedido.material)
+        estoque.quantidade += pedido.quantidade
+        estoque.save()
+
+        messages.success(request, 'Entrega confirmada e estoque atualizado.')
+        return redirect('listar_pedidos_administrativo')
+
+    return render(request, 'materiais/confirmar_entrega.html', {'pedido': pedido})
+
+#registro dos pagamentos
+@role_required('financeiro')
+def relatorio_pagamentos_materiais(request):
+    pagamentos = Pagamento.objects.filter(descricao__startswith='Compra de').order_by('-data_pagamento')
+    total = pagamentos.aggregate(total=models.Sum('valor'))['total'] or 0
+    return render(request, 'financeiro/relatorio_pagamentos_materiais.html', {
+        'pagamentos': pagamentos,
+        'total': total
+    })
+
+
+
+
+
 

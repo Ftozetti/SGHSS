@@ -22,8 +22,9 @@
         <div class="col-md-6">
             <div class="card p-3">
                 <h5 class="card-title">Materiais</h5>
-                <a class="btn btn-outline-light mt-2" href="#">Inventário de Materiais</a>
-                <a class="btn btn-outline-light mt-2" href="#">Gerar Pedido de Compra</a>
+                <a href="{% url 'visualizar_estoque' %}" class="btn btn-outline-primary mt-2">Visualizar Estoque</a>
+                <a class="btn btn-outline-success mt-2" href="{% url 'criar_pedido_material' %}">Gerar Pedido de Compra</a>
+                <a class="btn btn-outline-info mt-2" href="{% url 'listar_pedidos_administrativo' %}">Consultar Pedidos</a>
             </div>
         </div>
 
