@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Detalhes da Teleconsulta</h2>
+
+<p><strong>Data:</strong> {{ teleconsulta.agenda.data|date:"d/m/Y" }}</p>
+<p><strong>Horário:</strong> {{ teleconsulta.agenda.horario_inicio|time:"H:i" }}</p>
+<p><strong>Status:</strong> {{ teleconsulta.get_status_display }}</p>
+<p><strong>Médico:</strong> {{ teleconsulta.medico.get_full_name }}</p>
+<p><strong>Valor:</strong> R$ {{ teleconsulta.valor }}</p>
+
+<hr>
+
+<p><strong>Observações ao paciente:</strong><br>{{ teleconsulta.observacoes_visiveis|default:"Nenhuma." }}</p>
+
+{% if mostrar_obs_internas %}
+<p><strong>Observações internas:</strong><br>{{ teleconsulta.observacoes_internas|default:"Nenhuma." }}</p>
+{% endif %}
+
+<hr>
+<h4>Documentos</h4>
+<ul>
+    {% for laudo in teleconsulta.laudos.all %}
+        <li><a href="{% url 'visualizar_laudo' laudo.id %}" target="_blank">Laudo - {{ laudo.criado_em|date:"d/m/Y" }}</a></li>
+    {% endfor %}
+    {% for receita in teleconsulta.receitas.all %}
+        <li><a href="{% url 'visualizar_receita' receita.id %}" target="_blank">Receita - {{ receita.criado_em|date:"d/m/Y" }}</a></li>
+    {% endfor %}
+    {% for atestado in teleconsulta.atestados.all %}
+        <li><a href="{% url 'visualizar_atestado' atestado.id %}" target="_blank">Atestado - {{ atestado.criado_em|date:"d/m/Y" }}</a></li>
+    {% endfor %}
+</ul>
+
+<a href="{% url 'teleconsultas_usuario' %}" class="btn btn-secondary mt-3">Voltar</a>
+{% endblock %}

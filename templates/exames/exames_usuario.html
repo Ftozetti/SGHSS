@@ -33,15 +33,17 @@
                     <td>R$ {{ exame.valor }}</td>
                     <td>
                         {% if exame.status == 'agendada' %}
-                            <a href="{% url 'cancelar_exame' exame.id %}" class="btn btn-sm btn-danger">
-                                Cancelar
-                            </a>
-                        {% endif %}
-
-                        {% if exame.status == 'finalizada' %}
-                            <a href="#" class="btn btn-sm btn-primary">
-                                Ver Resultado
-                            </a>
+                            <a href="{% url 'cancelar_exame' exame.id %}" class="btn btn-sm btn-danger">Cancelar</a>
+                        {% elif exame.status == 'em_andamento' %}
+                            <span class="text-muted">Resultado em breve</span>
+                        {% elif exame.status == 'finalizada' %}
+                            {% if user.role == 'administrativo' %}
+                                <a href="{% url 'detalhar_exame_admin' exame.id %}" class="btn btn-sm btn-primary">Consultar</a>
+                            {% else %}
+                                <a href="{% url 'detalhar_exame_usuario' exame.id %}" class="btn btn-sm btn-primary">Consultar</a>
+                            {% endif %}
+                        {% elif exame.status == 'cancelada' %}
+                            <span class="text-muted">Procedimento Cancelado</span>
                         {% endif %}
                     </td>
                 </tr>

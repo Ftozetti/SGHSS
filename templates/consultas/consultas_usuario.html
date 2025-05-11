@@ -24,15 +24,17 @@
                     <td>{{ consulta.get_status_display }}</td>
                     <td>
                         {% if consulta.status == 'agendada' %}
-                            <a href="{% url 'cancelar_consulta' consulta.id %}" class="btn btn-sm btn-danger">
-                                Cancelar
-                            </a>
-                        {% endif %}
-
-                        {% if consulta.status == 'em atendimento' or consulta.status == 'finalizada' %}
-                            <a href="{% url 'detalhar_consulta_usuario' consulta.id %}" class="btn btn-sm btn-primary">
-                                Consultar
-                            </a>
+                            <a href="{% url 'cancelar_consulta' consulta.id %}" class="btn btn-sm btn-danger">Cancelar</a>
+                        {% elif consulta.status == 'em_andamento' %}
+                            <span class="text-muted">Detalhamento em breve</span>
+                        {% elif consulta.status == 'finalizada' %}
+                             {% if user.role == 'administrativo' %}
+                                <a href="{% url 'detalhar_consulta_admin' consulta.id %}" class="btn btn-sm btn-primary">Consultar</a>
+                            {% else %}
+                                <a href="{% url 'detalhar_consulta_usuario' consulta.id %}" class="btn btn-sm btn-primary">Consultar</a>
+                            {% endif %}
+                        {% elif consulta.status == 'cancelada' %}
+                             <span class="text-muted">Procedimento Cancelado</span>
                         {% endif %}
                     </td>
                 </tr>

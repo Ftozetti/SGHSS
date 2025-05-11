@@ -1009,7 +1009,7 @@ def teleconsultas_usuario(request):
         teleconsultas = Teleconsulta.objects.all().order_by('-agenda__data')
     return render(request, 'teleconsultas/teleconsultas_usuario.html', {'teleconsultas': teleconsultas})
 
-#View para consultas de consultas, :O
+#View para consultas de consultas
 @role_required('paciente', 'administrativo')
 def detalhar_consulta_usuario(request, pk):
     consulta = get_object_or_404(Consulta, pk=pk)
@@ -1173,7 +1173,7 @@ def encerrar_atendimento_exame(request, pk):
     exame = get_object_or_404(Exame, pk=pk, medico=request.user)
 
     if request.method == 'POST' and exame.status == 'em_andamento':
-        exame.status = 'finalizado'
+        exame.status = 'finalizada'
         exame.save()
         messages.success(request, 'Exame finalizado com sucesso.')
 
@@ -1214,3 +1214,37 @@ def iniciar_atendimento_exame(request, pk):
     exame.status = 'em_andamento'
     exame.save()
     return redirect('detalhar_exame', pk=exame.pk)
+
+#View para a teleconsulta por pacientes e administrativo
+@role_required('paciente', 'administrativo')
+def detalhar_teleconsulta_usuario(request, pk):
+    teleconsulta = get_object_or_404(Teleconsulta, pk=pk)
+
+    # Paciente só pode acessar se for o próprio atendimento
+    if request.user.role == 'paciente' and teleconsulta.paciente != request.user:
+        return render(request, '403.html', status=403)
+
+    # Variável de controle para exibição de observações internas
+    mostrar_obs_internas = request.user.role == 'administrativo'
+
+    return render(request, 'teleconsultas/detalhar_teleconsulta_usuario.html', {
+        'teleconsulta': teleconsulta,
+        'mostrar_obs_internas': mostrar_obs_internas,
+    })
+
+#view para detalhamento de exames
+@role_required('paciente', 'administrativo')
+def detalhar_exame_usuario(request, pk):
+    exame = get_object_or_404(Exame, pk=pk)
+
+    # Paciente só pode acessar se for o próprio exame
+    if request.user.role == 'paciente' and exame.paciente != request.user:
+        return render(request, '403.html', status=403)
+
+    mostrar_obs_internas = request.user.role == 'administrativo'
+
+    return render(request, 'exames/detalhar_exame_usuario.html', {
+        'exame': exame,
+        'mostrar_obs_internas': mostrar_obs_internas,
+    })
+
