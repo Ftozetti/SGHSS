@@ -2,7 +2,7 @@
 {% block content %}
 <h2>Consulta com {{ consulta.paciente.get_full_name }} – {{ consulta.data }} {{ consulta.horario_inicio }}</h2>
 
-{% if form_observacoes %}
+{% if form_observacoes and consulta.status != 'finalizada' %}
 <form method="post">
     {% csrf_token %}
     <div class="mb-3">
@@ -31,9 +31,11 @@
 
 <hr>
 
-<a href="{% url 'emitir_laudo' consulta.id %}" class="btn btn-outline-primary">📝 Emitir Laudo</a>
-<a href="{% url 'emitir_atestado' consulta.id %}" class="btn btn-outline-secondary">📄 Emitir Atestado</a>
-<a href="{% url 'emitir_receita' consulta.id %}" class="btn btn-outline-success">💊 Emitir Receita</a>
+{% if consulta.status != 'finalizada' %}
+  <a href="{% url 'emitir_laudo' consulta.id %}" class="btn btn-outline-primary">📝 Emitir Laudo</a>
+  <a href="{% url 'emitir_atestado' consulta.id %}" class="btn btn-outline-secondary">📄 Emitir Atestado</a>
+  <a href="{% url 'emitir_receita' consulta.id %}" class="btn btn-outline-success">💊 Emitir Receita</a>
+{% endif %}
 <a href="{% url 'visualizar_prontuario' consulta.paciente.id %}" class="btn btn-outline-info">📚 Prontuário do Paciente</a>
 
 <hr>
@@ -82,15 +84,16 @@
   <p>Nenhum atestado emitido.</p>
 {% endif %}
 
+{% if consulta.status != 'finalizada' %}
+  <form method="post" action="{% url 'cancelar_atendimento' consulta.id %}" style="display:inline;">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-warning">↩️ Cancelar Atendimento</button>
+  </form>
 
-<form method="post" action="{% url 'cancelar_atendimento' consulta.id %}" style="display:inline;">
-  {% csrf_token %}
-  <button type="submit" class="btn btn-warning">↩️ Cancelar Atendimento</button>
-</form>
-
-<form method="post" action="{% url 'encerrar_atendimento' consulta.id %}" style="display:inline;">
-  {% csrf_token %}
-  <button type="submit" class="btn btn-danger">✅ Encerrar Consulta</button>
-</form>
+  <form method="post" action="{% url 'encerrar_atendimento' consulta.id %}" style="display:inline;">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">✅ Encerrar Consulta</button>
+  </form>
+{% endif %}
 
 {% endblock %}

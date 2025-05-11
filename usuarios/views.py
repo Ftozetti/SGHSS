@@ -357,17 +357,32 @@ def excluir_agenda_teleconsulta(request, pk):
 @role_required('administrativo')
 def bloquear_agenda_consulta(request, pk):
     agenda = get_object_or_404(AgendaConsulta, pk=pk)
+    
+    if agenda.consultas.exclude(status='cancelada').exists():
+        messages.error(
+            request,
+            'Este horário está vinculado a uma consulta ativa. '
+            'Para bloqueá-lo, cancele primeiro a consulta correspondente.'
+        )
+        return redirect('lista_agenda_consulta')
+
     agenda.status_manual = 'bloqueado'
     agenda.save()
     messages.success(request, 'Horário bloqueado com sucesso.')
     return redirect('lista_agenda_consulta')
 
+
 @role_required('administrativo')
 def desbloquear_agenda_consulta(request, pk):
     agenda = get_object_or_404(AgendaConsulta, pk=pk)
+
     if agenda.consultas.exclude(status='cancelada').exists():
-        messages.error(request, 'Não é possível desbloquear um horário com consulta ativa.')
+        messages.error(
+            request,
+            'Não é possível desbloquear este horário, pois há uma consulta ativa vinculada.'
+        )
         return redirect('lista_agenda_consulta')
+
     agenda.status_manual = 'livre'
     agenda.save()
     messages.success(request, 'Horário desbloqueado com sucesso.')
@@ -377,6 +392,15 @@ def desbloquear_agenda_consulta(request, pk):
 @role_required('administrativo')
 def bloquear_agenda_exame(request, pk):
     agenda = get_object_or_404(AgendaExame, pk=pk)
+
+    if agenda.exames.exclude(status='cancelada').exists():
+        messages.error(
+            request,
+            'Este horário já possui um exame agendado. '
+            'Cancele o exame antes de bloquear o horário.'
+        )
+        return redirect('lista_agenda_exame')
+
     agenda.status_manual = 'bloqueado'
     agenda.save()
     messages.success(request, 'Horário de exame bloqueado com sucesso.')
@@ -386,18 +410,33 @@ def bloquear_agenda_exame(request, pk):
 @role_required('administrativo')
 def desbloquear_agenda_exame(request, pk):
     agenda = get_object_or_404(AgendaExame, pk=pk)
+
     if agenda.exames.exclude(status='cancelada').exists():
-        messages.error(request, 'Não é possível desbloquear um horário com exame agendado.')
+        messages.error(
+            request,
+            'Não é possível desbloquear este horário, pois há um exame ativo vinculado.'
+        )
         return redirect('lista_agenda_exame')
+
     agenda.status_manual = 'livre'
     agenda.save()
     messages.success(request, 'Horário de exame desbloqueado com sucesso.')
     return redirect('lista_agenda_exame')
 
+
 #Bloqueio/Desbloqueio manual de Agenda de teleconsultas
 @role_required('administrativo')
 def bloquear_agenda_teleconsulta(request, pk):
     agenda = get_object_or_404(AgendaTeleconsulta, pk=pk)
+
+    if agenda.teleconsultas.exclude(status='cancelada').exists():
+        messages.error(
+            request,
+            'Este horário já está reservado para uma teleconsulta. '
+            'É necessário cancelar a teleconsulta para que o horário possa ser bloqueado.'
+        )
+        return redirect('lista_agenda_teleconsulta')
+
     agenda.status_manual = 'bloqueado'
     agenda.save()
     messages.success(request, 'Horário de teleconsulta bloqueado com sucesso.')
@@ -407,12 +446,17 @@ def bloquear_agenda_teleconsulta(request, pk):
 @role_required('administrativo')
 def desbloquear_agenda_teleconsulta(request, pk):
     agenda = get_object_or_404(AgendaTeleconsulta, pk=pk)
+
     if agenda.teleconsultas.exclude(status='cancelada').exists():
-        messages.error(request, 'Não é possível desbloquear um horário com teleconsulta agendada.')
+        messages.error(
+            request,
+            'Não é possível desbloquear este horário, pois há uma teleconsulta ativa vinculada.'
+        )
         return redirect('lista_agenda_teleconsulta')
+
     agenda.status_manual = 'livre'
     agenda.save()
-    messages.success(request, 'Horário desbloqueado com sucesso.')
+    messages.success(request, 'Horário de teleconsulta desbloqueado com sucesso.')
     return redirect('lista_agenda_teleconsulta')
 
 

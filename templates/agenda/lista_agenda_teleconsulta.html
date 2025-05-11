@@ -6,6 +6,11 @@
 <div class="container mt-4">
     <h2 class="mb-4">Agenda de Teleconsultas</h2>
     <a class="btn btn-primary mb-3" href="{% url 'criar_agenda_teleconsulta' %}">Nova Agenda</a>
+    <br>
+    <div class="mt-3">
+        <a href="{% url 'redirecionar_dashboard' %}" class="btn btn-secondary">🏠 Retornar ao Dashboard</a>
+    </div>
+    <br>
 
     <table class="table table-bordered table-striped">
         <thead>
@@ -37,6 +42,13 @@
                     <td>
                         <a href="{% url 'editar_agenda_teleconsulta' agenda.pk %}" class="btn btn-sm btn-warning">Editar</a>
                         <a href="{% url 'excluir_agenda_teleconsulta' agenda.pk %}" class="btn btn-sm btn-danger">Excluir</a>
+                        {% if agenda.status_manual == 'bloqueado' %}
+                            <a href="{% url 'desbloquear_agenda_teleconsulta' agenda.pk %}" class="btn btn-success btn-sm">Desbloquear</a>
+                        {% elif agenda.status_manual == 'livre' %}
+                            <a href="{% url 'bloquear_agenda_teleconsulta' agenda.pk %}" class="btn btn-warning btn-sm">Bloquear</a>
+                        {% else %}
+                            <span class="text-muted">Status indefinido</span>
+                        {% endif %}
                     </td>
                 </tr>
             {% empty %}
