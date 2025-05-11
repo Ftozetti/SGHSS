@@ -5,30 +5,42 @@
 {% block content %}
 <h2 class="mb-4">Bem-vindo, Dr(a). {{ user.get_full_name }}!</h2>
 
-<div class="col-md-4">
-  <div class="card p-3">
-    <h5 class="card-title">Consultas</h5>
-    <a href="{% url 'lista_consultas' %}" class="btn btn-outline-light mt-2">Consultas Agendadas</a>
-    <a href="{% url 'selecionar_paciente_prontuario' %}" class="btn btn-outline-light mt-2">Visualizar Prontuário</a>
-    <a href="#" class="btn btn-outline-light mt-2">Emitir Documentos</a>
-  </div>
-</div>
+<div class="row g-4">
 
-
-  <div class="col-md-4">
-    <div class="card p-3">
-      <h5 class="card-title">Exames</h5>
-      <a href="#" class="btn btn-outline-light mt-2">Exames a Avaliar</a>
-      <a href="#" class="btn btn-outline-light mt-2">Emitir Laudo</a>
+  <!-- Consultas -->
+  <div class="col-md-6">
+    <div class="card p-3 shadow rounded-3">
+      <h5 class="card-title">Consultas</h5>
+      <a href="{% url 'lista_consultas' %}" class="btn btn-outline-primary mt-2">Consultas Agendadas</a>
+      <a href="#" class="btn btn-outline-secondary mt-2 disabled">Emitir Documentos</a>
     </div>
   </div>
 
-  <div class="col-md-4">
-    <div class="card p-3">
+  <!-- Exames -->
+  <div class="col-md-6">
+    <div class="card p-3 shadow rounded-3">
+      <h5 class="card-title">Exames</h5>
+      <a href="#" class="btn btn-outline-primary mt-2 disabled">Exames a Avaliar</a>
+      <a href="#" class="btn btn-outline-secondary mt-2 disabled">Emitir Laudo</a>
+    </div>
+  </div>
+
+  <!-- Teleconsultas -->
+  <div class="col-md-6">
+    <div class="card p-3 shadow rounded-3">
       <h5 class="card-title">Teleconsultas</h5>
-      <a href="#" class="btn btn-outline-light mt-2">Acessar Teleconsultas</a>
+      <a href="{% url 'lista_teleconsultas' %}" class="btn btn-outline-primary mt-2">Teleconsultas Agendadas</a>
       <a href="#" class="btn btn-outline-warning mt-2">Fila de Atendimento</a>
     </div>
   </div>
+
+  <!-- Prontuário -->
+  <div class="col-md-6">
+    <div class="card p-3 shadow rounded-3">
+      <h5 class="card-title">Prontuário do Paciente</h5>
+      <a href="{% url 'selecionar_paciente_prontuario' %}" class="btn btn-outline-primary mt-2">Visualizar Prontuário</a>
+    </div>
+  </div>
+
 </div>
 {% endblock %}

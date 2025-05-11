@@ -49,7 +49,7 @@
                            onclick="return confirm('Deseja realmente iniciar esta consulta?');">
                             Iniciar Consulta
                         </a>
-                    {% elif consulta.status == 'em atendimento' %}
+                    {% elif consulta.status == 'em_andamento' %}
                         <a href="{% url 'detalhar_consulta' consulta.id %}" class="btn btn-sm btn-warning">
                             Acessar Consulta
                         </a>

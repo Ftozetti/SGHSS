@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% block content %}
+
 <h2>Consulta com {{ consulta.paciente.get_full_name }} – {{ consulta.data }} {{ consulta.horario_inicio }}</h2>
 
 {% if form_observacoes and consulta.status != 'finalizada' %}
@@ -40,12 +41,14 @@
 
 <hr>
 
+<hr>
 <h3>Documentos Emitidos</h3>
 
-{% if consulta.laudos.all %}
+{# Laudos #}
+{% if instancia.laudos.all %}
   <h4>Laudos</h4>
   <ul>
-    {% for laudo in consulta.laudos.all %}
+    {% for laudo in instancia.laudos.all %}
       <li>
         Laudo de {{ laudo.criado_em|date:"d/m/Y H:i" }} —
         <a href="{% url 'visualizar_laudo' laudo.id %}" target="_blank">Download PDF</a>
@@ -56,10 +59,11 @@
   <p>Nenhum laudo emitido.</p>
 {% endif %}
 
-{% if consulta.receitas.all %}
+{# Receitas #}
+{% if instancia.receitas.all %}
   <h4>Receitas</h4>
   <ul>
-    {% for receita in consulta.receitas.all %}
+    {% for receita in instancia.receitas.all %}
       <li>
         Receita de {{ receita.criado_em|date:"d/m/Y H:i" }} —
         <a href="{% url 'visualizar_receita' receita.id %}" target="_blank">Download PDF</a>
@@ -70,10 +74,11 @@
   <p>Nenhuma receita emitida.</p>
 {% endif %}
 
-{% if consulta.atestados.all %}
+{# Atestados #}
+{% if instancia.atestados.all %}
   <h4>Atestados</h4>
   <ul>
-    {% for atestado in consulta.atestados.all %}
+    {% for atestado in instancia.atestados.all %}
       <li>
         Atestado de {{ atestado.criado_em|date:"d/m/Y H:i" }} —
         <a href="{% url 'visualizar_atestado' atestado.id %}" target="_blank">Download PDF</a>
@@ -84,16 +89,30 @@
   <p>Nenhum atestado emitido.</p>
 {% endif %}
 
-{% if consulta.status != 'finalizada' %}
-  <form method="post" action="{% url 'cancelar_atendimento' consulta.id %}" style="display:inline;">
-    {% csrf_token %}
-    <button type="submit" class="btn btn-warning">↩️ Cancelar Atendimento</button>
-  </form>
 
-  <form method="post" action="{% url 'encerrar_atendimento' consulta.id %}" style="display:inline;">
-    {% csrf_token %}
-    <button type="submit" class="btn btn-danger">✅ Encerrar Consulta</button>
-  </form>
+{% if consulta.status == 'em_andamento' and request.user.role == 'medico' %}
+  {% if is_teleconsulta == True %}
+    <form method="post" action="{% url 'cancelar_atendimento_teleconsulta' consulta.id %}" style="display:inline;">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-warning">↩️ Cancelar Atendimento</button>
+    </form>
+
+    <form method="post" action="{% url 'encerrar_atendimento_teleconsulta' consulta.id %}" style="display:inline;">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">✅ Encerrar Consulta</button>
+    </form>
+  {% elif is_teleconsulta == False %}
+    <form method="post" action="{% url 'cancelar_atendimento' consulta.id %}" style="display:inline;">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-warning">↩️ Cancelar Atendimento</button>
+    </form>
+
+    <form method="post" action="{% url 'encerrar_atendimento' consulta.id %}" style="display:inline;">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">✅ Encerrar Consulta</button>
+    </form>
+  {% endif %}
 {% endif %}
+
 
 {% endblock %}

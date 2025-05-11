@@ -596,11 +596,18 @@ def agendar_teleconsulta(request):
 
     return render(request, 'teleconsultas/form_agendamento.html', {'form': form})
 
-#View para a listagem de consultas
+#View para a listagem de consultas para o medico
 @role_required('medico')
 def lista_consultas(request):
     consultas = Consulta.objects.filter(medico=request.user).order_by('-agenda__data')
     return render(request, 'consultas/lista_consultas.html', {'consultas': consultas})
+
+#View para a listagem de teleconsultas para o medico
+@role_required('medico')
+def lista_teleconsultas(request):
+    teleconsultas = Teleconsulta.objects.filter(medico=request.user).order_by('-agenda__data')
+    return render(request, 'teleconsultas/lista_teleconsultas.html', {'teleconsultas': teleconsultas})
+
 
 #view para cancelamento de consulta
 @role_required('paciente', 'administrativo')
@@ -671,7 +678,7 @@ def iniciar_consulta(request, pk):
         messages.error(request, 'A consulta não pode ser iniciada.')
         return redirect('lista_consultas')
 
-    consulta.status = 'em atendimento'
+    consulta.status = 'em_andamento'
     consulta.save()
     
     return redirect('detalhar_consulta', pk=consulta.pk)
@@ -692,14 +699,15 @@ def detalhar_consulta(request, pk):
 
     return render(request, 'consultas/detalhar_consulta.html', {
         'consulta': consulta,
-        'form_observacoes': form
+        'form_observacoes': form,
+        'is_teleconsulta': False  
     })
 
 #View que permite o cancelamento do atendimento e retorna o status para agendado
 @role_required('medico')
 def cancelar_atendimento(request, pk):
     consulta = get_object_or_404(Consulta, pk=pk, medico=request.user)
-    if request.method == 'POST' and consulta.status == 'em atendimento':
+    if request.method == 'POST' and consulta.status == 'em_andamento':
         consulta.status = 'agendada'
         consulta.save()
     return redirect('lista_consultas')
@@ -708,7 +716,7 @@ def cancelar_atendimento(request, pk):
 @role_required('medico')
 def encerrar_atendimento(request, pk):
     consulta = get_object_or_404(Consulta, pk=pk, medico=request.user)
-    if request.method == 'POST' and consulta.status == 'em atendimento':
+    if request.method == 'POST' and consulta.status == 'em_andamento':
         consulta.status = 'finalizada'
         consulta.save()
     return redirect('lista_consultas') 
@@ -716,71 +724,138 @@ def encerrar_atendimento(request, pk):
 #View para emissão de laudo em pdf
 @role_required('medico')
 def emitir_laudo(request, pk):
-    consulta = get_object_or_404(Consulta, id=pk)
+    # Tenta buscar Consulta ou Teleconsulta
+    consulta = Consulta.objects.filter(id=pk).first()
+    teleconsulta = Teleconsulta.objects.filter(id=pk).first()
+
+    if not consulta and not teleconsulta:
+        return HttpResponse("Consulta não encontrada.", status=404)
+
+    instancia = consulta or teleconsulta
+    paciente = instancia.paciente
 
     if request.method == 'POST':
         form = LaudoForm(request.POST)
         if form.is_valid():
             laudo = form.save(commit=False)
-            laudo.consulta = consulta
             laudo.medico = request.user
-            laudo.paciente = consulta.paciente
+            laudo.paciente = paciente
+            if consulta:
+                laudo.consulta = consulta
+            else:
+                laudo.teleconsulta = teleconsulta
             laudo.save()
 
             html = render_to_string('consultas/laudo_pdf.html', {'laudo': laudo})
             resultado = io.BytesIO()
             pisa.CreatePDF(io.BytesIO(html.encode('utf-8')), dest=resultado)
-
             laudo.arquivo_pdf.save(f'laudo_{laudo.id}.pdf', ContentFile(resultado.getvalue()))
             laudo.save()
 
-            return redirect('detalhar_consulta', pk=consulta.id)
+            return redirect('detalhar_consulta' if consulta else 'detalhar_teleconsulta', pk=instancia.id)
     else:
         form = LaudoForm()
 
-    return render(request, 'consultas/form_laudo.html', {'consulta': consulta, 'form': form})
-
-#View para visualizar laudo
-@role_required('medico', 'paciente', 'administrativo')
-def visualizar_laudo(request, laudo_id):
-    laudo = get_object_or_404(Laudo, id=laudo_id)
-
-    # Verifica se o usuário tem permissão
-    if request.user != laudo.medico and request.user != laudo.paciente and request.user.role != 'administrativo':
-        return HttpResponseForbidden("Você não tem permissão para acessar este laudo.")
-
-    if laudo.arquivo_pdf:
-        return FileResponse(laudo.arquivo_pdf.open('rb'), content_type='application/pdf')
-    return HttpResponse("Arquivo não encontrado.", status=404)
+    return render(request, 'consultas/form_laudo.html', {
+        'instancia': instancia,  # nome neutro
+        'form': form,
+        'is_teleconsulta': bool(teleconsulta)
+    })
 
 
-#View para emissão de atestados
 @role_required('medico')
 def emitir_atestado(request, pk):
-    consulta = get_object_or_404(Consulta, id=pk)
+    consulta = Consulta.objects.filter(id=pk).first()
+    teleconsulta = Teleconsulta.objects.filter(id=pk).first()
+
+    if not consulta and not teleconsulta:
+        return HttpResponse("Consulta não encontrada.", status=404)
+
+    instancia = consulta or teleconsulta
+    paciente = instancia.paciente
 
     if request.method == 'POST':
         form = AtestadoForm(request.POST)
         if form.is_valid():
             atestado = form.save(commit=False)
-            atestado.consulta = consulta
             atestado.medico = request.user
-            atestado.paciente = consulta.paciente
+            atestado.paciente = paciente
+            if consulta:
+                atestado.consulta = consulta
+            else:
+                atestado.teleconsulta = teleconsulta
             atestado.save()
 
-        html = render_to_string('consultas/atestado_pdf.html', {'atestado': atestado})
-        resultado = io.BytesIO()
-        pisa.CreatePDF(io.BytesIO(html.encode('utf-8')), dest=resultado)
+            html = render_to_string('consultas/atestado_pdf.html', {'atestado': atestado})
+            resultado = io.BytesIO()
+            pisa.CreatePDF(io.BytesIO(html.encode('utf-8')), dest=resultado)
+            atestado.arquivo_pdf.save(f'atestado_{atestado.id}.pdf', ContentFile(resultado.getvalue()))
+            atestado.save()
 
-        atestado.arquivo_pdf.save(f'atestado_{atestado.id}.pdf', ContentFile(resultado.getvalue()))
-        atestado.save()
-
-        return redirect('detalhar_consulta', pk=consulta.id)
-    
+            return redirect('detalhar_consulta' if consulta else 'detalhar_teleconsulta', pk=instancia.id)
     else:
         form = AtestadoForm()
 
-    return render(request, 'consultas/form_atestado.html', {'consulta': consulta, 'form': form})
+    return render(request, 'consultas/form_atestado.html', {
+        'instancia': instancia,
+        'form': form,
+        'is_teleconsulta': bool(teleconsulta)
+    })
+
+
+@role_required('medico')
+def emitir_receita(request, pk):
+    consulta = Consulta.objects.filter(id=pk).first()
+    teleconsulta = Teleconsulta.objects.filter(id=pk).first()
+
+    if not consulta and not teleconsulta:
+        return HttpResponse("Consulta não encontrada.", status=404)
+
+    instancia = consulta or teleconsulta
+    paciente = instancia.paciente
+
+    if request.method == 'POST':
+        form = ReceitaForm(request.POST)
+        if form.is_valid():
+            receita = form.save(commit=False)
+            receita.medico = request.user
+            receita.paciente = paciente
+            if consulta:
+                receita.consulta = consulta
+            else:
+                receita.teleconsulta = teleconsulta
+            receita.save()
+
+            html = render_to_string('consultas/receita_pdf.html', {'receita': receita})
+            resultado = io.BytesIO()
+            pisa.CreatePDF(io.BytesIO(html.encode('utf-8')), dest=resultado)
+            receita.arquivo_pdf.save(f'receita_{receita.id}.pdf', ContentFile(resultado.getvalue()))
+            receita.save()
+
+            return redirect('detalhar_consulta' if consulta else 'detalhar_teleconsulta', pk=instancia.id)
+    else:
+        form = ReceitaForm()
+
+    return render(request, 'consultas/form_receita.html', {
+        'instancia': instancia,
+        'form': form,
+        'is_teleconsulta': bool(teleconsulta)
+    })
+
+#View de visualização de laudo
+@role_required('medico', 'paciente', 'administrativo')
+def visualizar_laudo(request, laudo_id):
+    laudo = get_object_or_404(Laudo, id=laudo_id)
+
+    # Verifica se o usuário tem permissão para visualizar
+    if request.user != laudo.medico and request.user != laudo.paciente and request.user.role != 'administrativo':
+        return HttpResponseForbidden("Você não tem permissão para acessar este laudo.")
+
+    # Retorna o PDF se disponível
+    if laudo.arquivo_pdf:
+        return FileResponse(laudo.arquivo_pdf.open('rb'), content_type='application/pdf')
+
+    return HttpResponse("Arquivo não encontrado.", status=404)
 
 #view para visualizar atestado
 @role_required('medico', 'paciente', 'administrativo')
@@ -793,33 +868,6 @@ def visualizar_atestado(request, atestado_id):
     if atestado.arquivo_pdf:
         return FileResponse(atestado.arquivo_pdf.open('rb'), content_type='application/pdf')
     return HttpResponse("Arquivo não encontrado.", status=404)
-
-#View para a emissão de receitas
-@role_required('medico')
-def emitir_receita(request, pk):
-    consulta = get_object_or_404(Consulta, id=pk)
-
-    if request.method == 'POST':
-        form = ReceitaForm(request.POST)
-        if form.is_valid():
-            receita = form.save(commit=False)
-            receita.consulta = consulta
-            receita.medico = request.user
-            receita.paciente = consulta.paciente
-            receita.save()
-
-            html = render_to_string('consultas/receita_pdf.html', {'receita': receita})
-            resultado = io.BytesIO()
-            pisa.CreatePDF(io.BytesIO(html.encode('utf-8')), dest=resultado)
-
-            receita.arquivo_pdf.save(f'receita_{receita.id}.pdf', ContentFile(resultado.getvalue()))
-            receita.save()
-
-            return redirect('detalhar_consulta', pk=consulta.id)
-    else:
-        form = ReceitaForm()
-
-    return render(request, 'consultas/form_receita.html', {'consulta': consulta, 'form': form})
 
 
 #View de visualização de receitas
@@ -901,7 +949,6 @@ def teleconsultas_usuario(request):
         teleconsultas = Teleconsulta.objects.all().order_by('-agenda__data')
     return render(request, 'teleconsultas/teleconsultas_usuario.html', {'teleconsultas': teleconsultas})
 
-
 #View para consultas de consultas, :O
 @role_required('paciente', 'administrativo')
 def detalhar_consulta_usuario(request, pk):
@@ -933,3 +980,58 @@ def agendas_disponiveis_exame(request):
     ]
 
     return JsonResponse({'agendas': agendas_data})
+
+#iniciar e alterar teleconsultas
+@role_required('medico')
+def iniciar_teleconsulta(request, pk):
+    tele = get_object_or_404(Teleconsulta, pk=pk, medico=request.user)
+
+    if tele.status != 'agendada':
+        messages.error(request, 'Esta teleconsulta não pode ser iniciada.')
+        return redirect('lista_teleconsultas')
+
+    tele.status = 'em_andamento'
+    tele.save()
+
+    return redirect('detalhar_teleconsulta', pk=tele.id)
+
+@role_required('medico')
+def cancelar_atendimento_teleconsulta(request, pk):
+    tele = get_object_or_404(Teleconsulta, pk=pk, medico=request.user)
+
+    if request.method == 'POST' and tele.status == 'em_andamento':
+        tele.status = 'agendada'
+        tele.save()
+        messages.success(request, 'Atendimento cancelado com sucesso.')
+    return redirect('lista_teleconsultas')
+
+@role_required('medico')
+def encerrar_atendimento_teleconsulta(request, pk):
+    tele = get_object_or_404(Teleconsulta, pk=pk, medico=request.user)
+
+    if request.method == 'POST' and tele.status == 'em_andamento':
+        tele.status = 'finalizada'
+        tele.save()
+        messages.success(request, 'Atendimento finalizado com sucesso.')
+    return redirect('lista_teleconsultas')
+
+@role_required('medico')
+def detalhar_teleconsulta(request, pk):
+    teleconsulta = get_object_or_404(Teleconsulta, pk=pk, medico=request.user)
+
+    if request.method == 'POST':
+        form = ObservacoesConsultaForm(request.POST, instance=teleconsulta)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Observações atualizadas com sucesso.')
+            return redirect('detalhar_teleconsulta', pk=pk)
+    else:
+        form = ObservacoesConsultaForm(instance=teleconsulta)
+
+    return render(request, 'consultas/detalhar_consulta.html', {
+        'consulta': teleconsulta,
+        'form_observacoes': form,
+        'is_teleconsulta': True 
+    })
+
+

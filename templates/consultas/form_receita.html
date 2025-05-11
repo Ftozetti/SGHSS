@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Emitir Receita – Consulta com {{ consulta.paciente.get_full_name }}</h2>
+<h2>Emitir Receita – {% if is_teleconsulta %}Teleconsulta{% else %}Consulta{% endif %} com {{ instancia.paciente.get_full_name }}</h2>
 <form method="post">
   {% csrf_token %}
   {{ form.as_p }}

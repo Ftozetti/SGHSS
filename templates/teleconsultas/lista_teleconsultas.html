@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}Teleconsultas Agendadas{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Teleconsultas Agendadas</h2>
+
+<p class="text-muted">
+    Visualizando suas teleconsultas como médico.
+</p>
+
+<div class="mb-3">
+    <a href="{% url 'dashboard_medico' %}" class="btn btn-secondary">🏠 Retornar à Home</a>
+</div>
+
+{% if teleconsultas %}
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Data</th>
+            <th>Horário</th>
+            <th>Paciente</th>
+            <th>Status</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for tele in teleconsultas %}
+        <tr>
+            <td>{{ tele.agenda.data }}</td>
+            <td>{{ tele.agenda.horario_inicio }} às {{ tele.agenda.horario_fim }}</td>
+            <td>{{ tele.paciente.get_full_name }}</td>
+            <td>{{ tele.status|default:"Agendada" }}</td>
+            <td>
+                {% if tele.status == 'agendada' %}
+                  <a href="{% url 'iniciar_teleconsulta' tele.id %}" class="btn btn-sm btn-success"
+                    onclick="return confirm('Deseja realmente iniciar esta teleconsulta?');">
+                    Iniciar Atendimento
+                  </a>
+                {% elif tele.status == 'em_andamento' %}
+                    <a href="{% url 'detalhar_teleconsulta' tele.id %}" class="btn btn-sm btn-warning">
+                        Acessar Atendimento
+                    </a>
+                {% elif tele.status == 'finalizada' %}
+                    <a href="{% url 'detalhar_teleconsulta' tele.id %}" class="btn btn-sm btn-info">
+                        Consultar
+                    </a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+    <p>Nenhuma teleconsulta agendada até o momento.</p>
+{% endif %}
+
+<a href="{% url 'dashboard_medico' %}" class="btn btn-secondary">Voltar ao Dashboard</a>
+{% endblock %}

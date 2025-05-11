@@ -279,8 +279,17 @@ class Exame(AtendimentoBase):
         return f"Exame de {self.get_tipo_display()} para {self.paciente.get_full_name()} em {self.agenda.data}"
     
 #Classe para criação de laudos, atestados e receitas
+# Documentos médicos genéricos (válido para Consulta ou Teleconsulta)
+
 class Laudo(models.Model):
-    consulta = models.ForeignKey(Consulta, on_delete=models.CASCADE, related_name='laudos')
+    consulta = models.ForeignKey(
+        'Consulta', on_delete=models.CASCADE,
+        related_name='laudos', null=True, blank=True
+    )
+    teleconsulta = models.ForeignKey(
+        'Teleconsulta', on_delete=models.CASCADE,
+        related_name='laudos', null=True, blank=True
+    )
     medico = models.ForeignKey(
         Usuario, on_delete=models.CASCADE,
         limit_choices_to={'role': 'medico'},
@@ -295,9 +304,20 @@ class Laudo(models.Model):
     criado_em = models.DateTimeField(auto_now_add=True)
     arquivo_pdf = models.FileField(upload_to='documentos/laudos/', null=True, blank=True)
 
+    def __str__(self):
+        tipo = "Teleconsulta" if self.teleconsulta else "Consulta"
+        return f"Laudo ({tipo}) - {self.paciente.get_full_name()}"
+
 
 class Receita(models.Model):
-    consulta = models.ForeignKey(Consulta, on_delete=models.CASCADE, related_name='receitas')
+    consulta = models.ForeignKey(
+        'Consulta', on_delete=models.CASCADE,
+        related_name='receitas', null=True, blank=True
+    )
+    teleconsulta = models.ForeignKey(
+        'Teleconsulta', on_delete=models.CASCADE,
+        related_name='receitas', null=True, blank=True
+    )
     medico = models.ForeignKey(
         Usuario, on_delete=models.CASCADE,
         limit_choices_to={'role': 'medico'},
@@ -312,9 +332,20 @@ class Receita(models.Model):
     criado_em = models.DateTimeField(auto_now_add=True)
     arquivo_pdf = models.FileField(upload_to='documentos/receitas/', null=True, blank=True)
 
+    def __str__(self):
+        tipo = "Teleconsulta" if self.teleconsulta else "Consulta"
+        return f"Receita ({tipo}) - {self.paciente.get_full_name()}"
+
 
 class Atestado(models.Model):
-    consulta = models.ForeignKey(Consulta, on_delete=models.CASCADE, related_name='atestados')
+    consulta = models.ForeignKey(
+        'Consulta', on_delete=models.CASCADE,
+        related_name='atestados', null=True, blank=True
+    )
+    teleconsulta = models.ForeignKey(
+        'Teleconsulta', on_delete=models.CASCADE,
+        related_name='atestados', null=True, blank=True
+    )
     medico = models.ForeignKey(
         Usuario, on_delete=models.CASCADE,
         limit_choices_to={'role': 'medico'},
@@ -328,6 +359,10 @@ class Atestado(models.Model):
     conteudo = models.TextField()
     criado_em = models.DateTimeField(auto_now_add=True)
     arquivo_pdf = models.FileField(upload_to='documentos/atestados/', null=True, blank=True)
+
+    def __str__(self):
+        tipo = "Teleconsulta" if self.teleconsulta else "Consulta"
+        return f"Atestado ({tipo}) - {self.paciente.get_full_name()}"
 
 #Model para a criação de um prontuário para o paciente
 class Prontuario(models.Model):

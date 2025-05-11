@@ -66,6 +66,16 @@ urlpatterns = [
     path('teleconsultas/agendar/', views.agendar_teleconsulta, name='agendar_teleconsulta'),
     path('teleconsultas/usuario/', views.teleconsultas_usuario, name='teleconsultas_usuario'),
     path('teleconsultas/<int:teleconsulta_id>/cancelar/', views.cancelar_teleconsulta, name='cancelar_teleconsulta'),
+    path('teleconsultas/<int:pk>/emitir-laudo/', views.emitir_laudo, name='emitir_laudo'),
+    path('teleconsultas/<int:pk>/emitir-atestado/', views.emitir_atestado, name='emitir_atestado'),
+    path('teleconsultas/<int:pk>/emitir-receita/', views.emitir_receita, name='emitir_receita'),
+    path('teleconsultas/medico/', views.lista_teleconsultas, name='lista_teleconsultas'),
+    path('teleconsultas/<int:pk>/detalhar/', views.detalhar_teleconsulta, name='detalhar_teleconsulta'),
+    path('teleconsultas/<int:pk>/iniciar/', views.iniciar_teleconsulta, name='iniciar_teleconsulta'),
+    path('teleconsultas/<int:pk>/cancelar-atendimento/', views.cancelar_atendimento_teleconsulta, name='cancelar_atendimento_teleconsulta'),
+    path('teleconsultas/<int:pk>/encerrar/', views.encerrar_atendimento_teleconsulta, name='encerrar_atendimento_teleconsulta'),
+
+
     
 
     # Prontuário
