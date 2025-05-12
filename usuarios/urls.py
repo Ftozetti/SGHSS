@@ -3,6 +3,9 @@ from . import views
 
 urlpatterns = [
     # Página inicial e redirecionamento por perfil
+    path('api/teste-login/', views.login_postman, name='login_postman'),
+    path('api/token-login/', views.api_login_token, name='token_login'),
+
     path('', views.redirecionar_dashboard, name='home'),
     path('redirecionar/', views.redirecionar_dashboard, name='redirecionar_dashboard'),
 
@@ -110,6 +113,10 @@ urlpatterns = [
     path('materiais/financeiro/', views.listar_pedidos_financeiro, name='listar_pedidos_financeiro'),
     path('materiais/', views.listar_pedidos_administrativo, name='listar_pedidos_administrativo'),
     path('materiais/<int:pedido_id>/confirmar-entrega/', views.confirmar_entrega_pedido, name='confirmar_entrega_pedido'),
+
+    #cadastro de pacientes
+    path('cadastrar-paciente/', views.cadastrar_paciente_view, name='cadastrar_paciente'),
+    path('pacientes/', views.listar_pacientes_view, name='listar_pacientes'),
 
 
 

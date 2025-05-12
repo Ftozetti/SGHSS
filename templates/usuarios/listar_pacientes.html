@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Pacientes Cadastrados</h2>
+
+    {% if pacientes %}
+        <table class="table table-bordered mt-3">
+            <thead class="table-light">
+                <tr>
+                    <th>Nome de Usuário</th>
+                    <th>Email</th>
+                    <th>CPF</th>
+                    <th>Telefone</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for paciente in pacientes %}
+                    <tr>
+                        <td>{{ paciente.username }}</td>
+                        <td>{{ paciente.email }}</td>
+                        <td>{{ paciente.cpf }}</td>
+                        <td>{{ paciente.telefone }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>Nenhum paciente cadastrado.</p>
+    {% endif %}
+</div>
+<br>
+<a href="{% url 'dashboard_administrativo' %}" class="btn btn-secondary">Voltar ao Dashboard</a>
+{% endblock %}

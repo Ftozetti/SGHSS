@@ -44,6 +44,13 @@
                 <a class="btn btn-outline-light mt-2" href="{% url 'lista_salas' %}">Gerenciar Estrutura</a>
             </div>
         </div>
+                <div class="col-md-6">
+            <div class="card p-3">
+                <h5 class="card-title">Pacientes</h5>
+                <a href="{% url 'cadastrar_paciente' %}" class="btn btn-success">Cadastrar Paciente</a>
+                <a href="{% url 'listar_pacientes' %}" class="btn btn-outline-primary">Ver Pacientes</a>
+            </div>
+
     </div>
 </div>
 {% endblock %}

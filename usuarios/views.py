@@ -3,6 +3,7 @@ from django.utils import timezone
 from django.utils.timezone import make_aware
 from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth import authenticate, login, get_user_model
 from django.contrib.auth.decorators import login_required
 from .models import (Sala, Consulta, Usuario, Prontuario, Exame, Teleconsulta, Laudo, 
     Receita, Atestado, AgendaConsulta, AgendaExame, AgendaTeleconsulta, ResultadoExame,
@@ -22,7 +23,13 @@ from xhtml2pdf import pisa
 import io
 from django.core.files.base import ContentFile
 from django.db import models
+import json
 
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.authtoken.models import Token
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
 
 
 #View criada para o correto direcionamento de página inicial conforme o perfil de usuário
@@ -1359,8 +1366,51 @@ def relatorio_pagamentos_materiais(request):
         'total': total
     })
 
+@csrf_exempt
+def login_postman(request):
+    if request.method == 'POST':
+        data = request.POST or json.loads(request.body)
+        user = authenticate(request, username=data.get('username'), password=data.get('password'))
+        if user:
+            login(request, user)
+            return JsonResponse({'mensagem': 'Login bem-sucedido'})
+        return JsonResponse({'erro': 'Credenciais inválidas'}, status=401)
+    return JsonResponse({'erro': 'Método não permitido'}, status=405)
 
+@csrf_exempt
+@api_view(['POST'])
+def api_login_token(request):
+    view = ObtainAuthToken.as_view()
+    return view(request._request)
 
+User = get_user_model()
 
+@role_required('administrativo')
+def cadastrar_paciente_view(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        cpf = request.POST.get('cpf')
+        telefone = request.POST.get('telefone')
+        password = request.POST.get('password')
 
+        try:
+            User.objects.create_user(
+                username=username,
+                email=email,
+                cpf=cpf,
+                telefone=telefone,
+                password=password,
+                role='paciente'
+            )
+            messages.success(request, f'Paciente {username} cadastrado com sucesso.')
+            return redirect('cadastrar_paciente')
+        except Exception as e:
+            messages.error(request, f'Erro ao cadastrar paciente: {e}')
 
+    return render(request, 'usuarios/cadastrar_paciente.html')
+
+@role_required('administrativo')
+def listar_pacientes_view(request):
+    pacientes = User.objects.filter(role='paciente').order_by('username')
+    return render(request, 'usuarios/listar_pacientes.html', {'pacientes': pacientes})
