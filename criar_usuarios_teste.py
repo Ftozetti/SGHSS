@@ -4,7 +4,7 @@ import os
 import django
 from django.contrib.auth import get_user_model
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'SGHSS.settings')  # ajuste se necessário
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'SHGSS.settings')  # ajuste se necessário
 django.setup()
 
 User = get_user_model()
