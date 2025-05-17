@@ -797,6 +797,8 @@ def emitir_laudo_teleconsulta(request, pk):
     })
 
 #View para emissão de receitas
+#View para emissão de receitas
+@csrf_exempt
 @role_required('medico')
 def emitir_receita_consulta(request, pk):
     consulta = get_object_or_404(Consulta, pk=pk, medico=request.user)
@@ -825,8 +827,7 @@ def emitir_receita_consulta(request, pk):
         'consulta': consulta,
         'form': form
     })
-
-
+    
 @role_required('medico')
 def emitir_receita_teleconsulta(request, pk):
     teleconsulta = get_object_or_404(Teleconsulta, pk=pk, medico=request.user)

@@ -73,7 +73,7 @@ urlpatterns = [
     path('exames/medico/', views.lista_exames, name='lista_exames'),
     path('documentos/resultado-exame/<int:resultado_id>/', views.visualizar_resultado_exame, name='visualizar_resultado_exame'),
     path('exames/<int:pk>/iniciar/', views.iniciar_atendimento_exame, name='iniciar_atendimento_exame'),
-    path('exames/<int:pk>/detalhar/', views.detalhar_exame_usuario, name='detalhar_exame_usuario'),
+    path('exames/usuario/<int:pk>/detalhar/', views.detalhar_exame_usuario, name='detalhar_exame_usuario'),
     path('exames/administrativo/<int:pk>/detalhar/', views.detalhar_exame_usuario, name='detalhar_exame_admin'),
 
     # Teleconsultas
@@ -88,7 +88,7 @@ urlpatterns = [
     path('teleconsultas/<int:pk>/iniciar/', views.iniciar_teleconsulta, name='iniciar_teleconsulta'),
     path('teleconsultas/<int:pk>/cancelar-atendimento/', views.cancelar_atendimento_teleconsulta, name='cancelar_atendimento_teleconsulta'),
     path('teleconsultas/<int:pk>/encerrar/', views.encerrar_atendimento_teleconsulta, name='encerrar_atendimento_teleconsulta'),
-    path('teleconsultas/<int:pk>/detalhar/', views.detalhar_teleconsulta_usuario, name='detalhar_teleconsulta_usuario'),
+    path('teleconsultas/usuario/<int:pk>/detalhar/', views.detalhar_teleconsulta_usuario, name='detalhar_teleconsulta_usuario'),
     path('teleconsultas/administrativo/<int:pk>/detalhar/', views.detalhar_teleconsulta_usuario, name='detalhar_teleconsulta_admin'),
 
 
