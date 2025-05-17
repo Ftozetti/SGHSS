@@ -1,6 +1,10 @@
 # 🏥 SGHSS – Sistema de Gestão Hospitalar e de Serviços de Saúde
 
-Este sistema é um projeto acadêmico desenvolvido com Django, voltado para a gestão de clínicas médicas. Ele possui múltiplos perfis de usuários com funcionalidades específicas: **Paciente, Médico, Administrativo e Financeiro**.
+Este sistema é um projeto com fins educacionais, desenvolvido com Django no contexto do curso de Análise e Desenvolvimento de Sistemas da **UNINTER – Centro Universitário Internacional**.  
+O objetivo é demonstrar, na prática, a construção de um sistema completo de gestão para clínicas médicas, com múltiplos perfis de usuários e funcionalidades específicas: **Paciente, Médico, Administrativo e Financeiro**.
+
+⚠️ **Este sistema não deve ser utilizado em ambiente de produção real**.  
+No entanto, o código está disponível e pode ser usado, adaptado ou estudado livremente pela comunidade.
 
 ---
 
