@@ -1,14 +1,25 @@
-# criar_usuarios_teste.py
+# configuracoes_iniciais_teste.py
 
 import os
+import sys
 import django
 from django.contrib.auth import get_user_model
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'SHGSS.settings')  # ajuste se necessário
+# Caminho absoluto do diretório onde está manage.py
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(BASE_DIR)
+
+# Nome da pasta com settings.py (ajuste se necessário)
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'SHGSS.settings')
+
+# Inicializa o Django
 django.setup()
+
+from usuarios.models import Material
 
 User = get_user_model()
 
+# Criação de usuários de teste
 usuarios_teste = [
     {
         'username': 'paciente1',
@@ -85,3 +96,24 @@ for dados in usuarios_teste:
         print(f"✅ Usuário {user.username} criado com sucesso!")
     else:
         print(f"ℹ️ Usuário {dados['username']} já existe.")
+
+# Criação de materiais de teste
+materiais = [
+    ("Luvas descartáveis", 0.50, "Medix Brasil Equipamentos Hospitalares"),
+    ("Máscara cirúrgica", 1.00, "VitaProtec Suprimentos Médicos"),
+    ("Algodão hidrófilo", 10.00, "BioClin Fornecimentos Hospitalares"),
+    ("Seringa descartável", 1.50, "SafeInject Equipamentos Médicos"),
+    ("Termômetro digital", 50.00, "ThermoTech Brasil Diagnósticos"),
+]
+
+for nome, valor, fornecedor in materiais:
+    material, criado = Material.objects.get_or_create(nome=nome, defaults={
+        'valor_unitario': valor,
+        'fornecedor': fornecedor,
+    })
+    if criado:
+        print(f"✅ Material '{nome}' cadastrado.")
+    else:
+        print(f"ℹ️ Material '{nome}' já existe.")
+
+print("\n🎉 Configuração inicial concluída com sucesso!")

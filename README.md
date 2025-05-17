@@ -53,12 +53,12 @@ python manage.py migrate
 
 ---
 
-## 👤 Criar usuários para testes
+## 👤 Criar usuários para testes e incluir materiais no banco de dados para testes
 
 Para facilitar a avaliação do sistema, execute o script abaixo para gerar usuários de todos os perfis com todos os **campos obrigatórios preenchidos** (como CPF, endereço, CRM, setor etc.):
 
 ```bash
-python criar_usuarios_teste.py
+python configuracoes_iniciais_teste.py
 ```
 
 ### 🧪 Usuários criados automaticamente:
